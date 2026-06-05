@@ -10,7 +10,10 @@ const pool = require('./config/database');
 const passport = require('./config/passport');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
+
+// Confiar en el proxy de Railway (CRÍTICO para cookies seguras en producción)
+app.set('trust proxy', 1);
 
 // Motor de vistas
 app.set('view engine', 'ejs');
@@ -25,13 +28,20 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Sesiones con PostgreSQL
 app.use(session({
-  store: new PgSession({ pool, tableName: 'session' }),
+  store: new PgSession({
+    pool,
+    tableName: 'session',
+    createTableIfMissing: true,
+  }),
   secret: process.env.SESSION_SECRET || 'quipusoft_secret_2026',
   resave: false,
   saveUninitialized: false,
+  proxy: true,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 8 * 60 * 60 * 1000, // 8 horas
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 8 * 60 * 60 * 1000,
   },
 }));
 
@@ -67,13 +77,13 @@ app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Quipusoft', time
 
 // 404
 app.use((req, res) => {
-  res.status(404).render('error', { mensaje: 'Página no encontrada.', user: req.user });
+  res.status(404).render('error', { mensaje: 'Página no encontrada.' });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).render('error', { mensaje: 'Error interno del servidor.', user: req.user });
+  res.status(500).render('error', { mensaje: 'Error interno del servidor.' });
 });
 
 app.listen(PORT, () => {
