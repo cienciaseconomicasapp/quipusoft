@@ -1,0 +1,79 @@
+<%- include('../partials/header', {title: title}) %>
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
+  <div>
+    <h2>Panel del docente</h2>
+    <p>Seguimiento de estudiantes — Diplomado Gerencia y Administración Tributaria 2026</p>
+  </div>
+  <a href="/admin/exportar" class="btn btn-secondary">Exportar progreso CSV</a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Estudiantes registrados</span>
+    <span class="stat-value"><%= estudiantes.length %></span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Empresa de práctica</span>
+    <span class="stat-value blue" style="font-size:14px;">Inversiones Uniatlantico S.A.S.</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Año gravable</span>
+    <span class="stat-value">2025</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">UVT 2025</span>
+    <span class="stat-value green" style="font-size:16px;">$49.799</span>
+  </div>
+</div>
+
+<div class="table-wrap" style="margin-top:1.5rem;">
+  <table>
+    <thead>
+      <tr>
+        <th>Estudiante</th>
+        <th>Email</th>
+        <th>Último acceso</th>
+        <th>Actividades completadas</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if(estudiantes.length === 0){ %>
+        <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">
+          Aún no hay estudiantes registrados. Se registrarán automáticamente al hacer login.
+        </td></tr>
+      <% } %>
+      <% estudiantes.forEach(e => { %>
+      <tr>
+        <td>
+          <% if(e.foto){ %>
+            <img src="<%= e.foto %>" style="width:24px;height:24px;border-radius:50%;margin-right:6px;vertical-align:middle;">
+          <% } %>
+          <%= e.nombre %>
+        </td>
+        <td style="font-size:12px;color:var(--muted)"><%= e.email %></td>
+        <td style="font-size:12px"><%= e.ultimo_acceso ? new Date(e.ultimo_acceso).toLocaleDateString('es-CO') : '—' %></td>
+        <td class="text-center">
+          <span class="badge badge-vigente"><%= e.actividades %></span>
+        </td>
+        <td style="display:flex;gap:6px;">
+          <a href="/admin/estudiante/<%= e.id %>" class="btn btn-secondary" style="padding:3px 10px;font-size:12px;">Ver detalle</a>
+          <button onclick="resetear(<%= e.id %>, '<%= e.nombre %>')"
+            class="btn btn-danger" style="padding:3px 10px;font-size:12px;">Resetear</button>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<script>
+async function resetear(id, nombre) {
+  if(!confirm(`¿Resetear los datos de ${nombre}? Esto restaurará las transacciones originales.`)) return;
+  const r = await fetch(`/admin/resetear/${id}`, { method: 'POST' });
+  const d = await r.json();
+  alert(d.mensaje || d.error);
+  location.reload();
+}
+</script>
+<%- include('../partials/footer') %>

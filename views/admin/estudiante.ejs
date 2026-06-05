@@ -1,0 +1,49 @@
+<%- include('../partials/header', {title: title}) %>
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
+  <div>
+    <h2><%= estudiante.nombre %></h2>
+    <p><%= estudiante.email %> &nbsp;|&nbsp; Rol: <%= estudiante.rol %></p>
+  </div>
+  <a href="/admin" class="btn btn-secondary">Volver</a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Transacciones en libro</span>
+    <span class="stat-value"><%= transacciones.total %></span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Casos atípicos</span>
+    <span class="stat-value red"><%= transacciones.atipicos %></span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Meses nómina generados</span>
+    <span class="stat-value blue"><%= nomina.meses_generados %></span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Actividades completadas</span>
+    <span class="stat-value green"><%= progreso.filter(p => p.completado).length %></span>
+  </div>
+</div>
+
+<div class="table-wrap" style="margin-top:1.5rem;">
+  <table>
+    <thead><tr><th>Semana</th><th>Actividad</th><th>Estado</th><th>Fecha</th></tr></thead>
+    <tbody>
+      <% if(progreso.length === 0){ %>
+        <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem;">Sin actividades registradas aún.</td></tr>
+      <% } %>
+      <% progreso.forEach(p => { %>
+      <tr>
+        <td>Semana <%= p.semana %></td>
+        <td><%= p.actividad %></td>
+        <td><span class="badge <%= p.completado ? 'badge-vigente' : 'badge-borrador' %>">
+          <%= p.completado ? 'Completada' : 'Pendiente' %>
+        </span></td>
+        <td style="font-size:12px"><%= p.fecha_completado ? new Date(p.fecha_completado).toLocaleDateString('es-CO') : '—' %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/footer') %>

@@ -5,6 +5,7 @@ const pool = require('./database');
 
 const ALLOWED_DOMAIN = process.env.ALLOWED_DOMAIN || 'mail.uniatlantico.edu.co';
 const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+const DOCENTE_EMAIL = process.env.DOCENTE_EMAIL || '';
 
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
@@ -27,23 +28,23 @@ async (accessToken, refreshToken, profile, done) => {
     );
 
     if (existing.rows.length > 0) {
+      // Si es el docente, asegurarse de que tenga rol correcto
+      const rol = email === DOCENTE_EMAIL ? 'docente' : existing.rows[0].rol;
       await pool.query(
-        'UPDATE usuarios SET ultimo_acceso = NOW(), nombre = $1, foto = $2 WHERE google_id = $3',
-        [profile.displayName, profile.photos[0]?.value, profile.id]
+        'UPDATE usuarios SET ultimo_acceso = NOW(), nombre = $1, foto = $2, rol = $3 WHERE google_id = $4',
+        [profile.displayName, profile.photos[0]?.value, rol, profile.id]
       );
-      return done(null, existing.rows[0]);
+      const updated = await pool.query('SELECT * FROM usuarios WHERE google_id = $1', [profile.id]);
+      return done(null, updated.rows[0]);
     }
+
+    // Determinar rol
+    const rol = email === DOCENTE_EMAIL ? 'docente' : 'estudiante';
 
     const nuevo = await pool.query(
       `INSERT INTO usuarios (google_id, email, nombre, foto, rol, fecha_registro, ultimo_acceso)
        VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`,
-      [
-        profile.id,
-        email,
-        profile.displayName,
-        profile.photos[0]?.value || null,
-        email === process.env.DOCENTE_EMAIL ? 'docente' : 'estudiante'
-      ]
+      [profile.id, email, profile.displayName, profile.photos[0]?.value || null, rol]
     );
 
     const userId = nuevo.rows[0].id;
@@ -74,27 +75,22 @@ async function crearSchemaEstudiante(userId) {
     await client.query('BEGIN');
     await client.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
 
-    // Crear tablas copiando estructura desde plantilla
-    await client.query(`CREATE TABLE IF NOT EXISTS "${schema}".empresa (LIKE plantilla.empresa INCLUDING ALL)`);
-    await client.query(`CREATE TABLE IF NOT EXISTS "${schema}".clientes (LIKE plantilla.clientes INCLUDING ALL)`);
-    await client.query(`CREATE TABLE IF NOT EXISTS "${schema}".proveedores (LIKE plantilla.proveedores INCLUDING ALL)`);
-    await client.query(`CREATE TABLE IF NOT EXISTS "${schema}".empleados (LIKE plantilla.empleados INCLUDING ALL)`);
-    await client.query(`CREATE TABLE IF NOT EXISTS "${schema}".transacciones (LIKE plantilla.transacciones INCLUDING ALL)`);
-    await client.query(`CREATE TABLE IF NOT EXISTS "${schema}".nomina (LIKE plantilla.nomina INCLUDING ALL)`);
-    await client.query(`CREATE TABLE IF NOT EXISTS "${schema}".activos_fijos (LIKE plantilla.activos_fijos INCLUDING ALL)`);
-    await client.query(`CREATE TABLE IF NOT EXISTS "${schema}".anticipos (LIKE plantilla.anticipos INCLUDING ALL)`);
+    const tablas = ['empresa','clientes','proveedores','empleados','transacciones','nomina','activos_fijos','anticipos'];
+    for (const tabla of tablas) {
+      const existe = await client.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables
+          WHERE table_schema = $1 AND table_name = $2
+        )`, [schema, tabla]);
 
-    // Copiar datos desde plantilla uno por uno
-    await client.query(`INSERT INTO "${schema}".empresa SELECT * FROM plantilla.empresa`);
-    await client.query(`INSERT INTO "${schema}".clientes SELECT * FROM plantilla.clientes`);
-    await client.query(`INSERT INTO "${schema}".proveedores SELECT * FROM plantilla.proveedores`);
-    await client.query(`INSERT INTO "${schema}".empleados SELECT * FROM plantilla.empleados`);
-    await client.query(`INSERT INTO "${schema}".transacciones SELECT * FROM plantilla.transacciones`);
-    await client.query(`INSERT INTO "${schema}".activos_fijos SELECT * FROM plantilla.activos_fijos`);
-    await client.query(`INSERT INTO "${schema}".anticipos SELECT * FROM plantilla.anticipos`);
-
+      if (!existe.rows[0].exists) {
+        await client.query(`CREATE TABLE IF NOT EXISTS "${schema}"."${tabla}" (LIKE plantilla."${tabla}" INCLUDING ALL)`);
+        await client.query(`INSERT INTO "${schema}"."${tabla}" SELECT * FROM plantilla."${tabla}"`);
+        console.log(`Tabla ${schema}.${tabla} creada`);
+      }
+    }
     await client.query('COMMIT');
-    console.log(`Schema ${schema} creado para usuario ${userId}`);
+    console.log(`Schema ${schema} listo para usuario ${userId}`);
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error creando schema para usuario', userId, err.message);
