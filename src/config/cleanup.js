@@ -1,5 +1,5 @@
 require('dotenv').config();
-const pool = require('./quipusoft/src/config/database');
+const pool = require('./database');
 
 async function cleanup() {
   const client = await pool.connect();
