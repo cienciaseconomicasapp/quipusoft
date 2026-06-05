@@ -1,0 +1,113 @@
+<%- include('../partials/header') %>
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+  <div>
+    <h2>Libro de transacciones</h2>
+    <p>Inversiones Uniatlantico S.A.S. &nbsp;|&nbsp; Año gravable 2025</p>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <a href="/transacciones/nueva/form" class="btn btn-primary">+ Nueva</a>
+    <a href="/transacciones/exportar/mokanatax" class="btn btn-secondary">Exportar a MokanaTax</a>
+  </div>
+</div>
+
+<div class="form-card" style="padding: 1rem;">
+  <form method="GET" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+    <div class="form-group" style="margin:0; min-width:120px;">
+      <label>Mes</label>
+      <select name="mes">
+        <option value="">Todos</option>
+        <% ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].forEach((m,i) => { %>
+          <option value="<%= i+1 %>" <%= filtros.mes==i+1 ? 'selected' : '' %>><%= m %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="form-group" style="margin:0; min-width:160px;">
+      <label>Tipo</label>
+      <select name="tipo">
+        <option value="">Todos</option>
+        <option value="Factura venta">Facturas de venta</option>
+        <option value="Factura compra">Facturas de compra</option>
+        <option value="Nota crédito">Notas crédito</option>
+        <option value="Nota débito">Notas débito</option>
+        <option value="Activo fijo">Activos fijos</option>
+        <option value="Nómina">Nómina electrónica</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin:0;">
+      <label>Estado</label>
+      <select name="estado">
+        <option value="">Todos</option>
+        <option value="vigente">Vigente</option>
+        <option value="rechazada">Rechazada</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary" style="margin-bottom:0;">Filtrar</button>
+    <a href="/transacciones" class="btn btn-secondary" style="margin-bottom:0;">Limpiar</a>
+  </form>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Documento</th><th>Fecha</th><th>Tipo</th><th>Contraparte</th><th>Concepto</th>
+        <th class="text-right">Subtotal</th><th class="text-right">IVA</th>
+        <th class="text-right">Retención</th><th class="text-right">Total</th>
+        <th>Estado</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% transacciones.forEach(t => { %>
+      <tr>
+        <td><strong><%= t.documento %></strong></td>
+        <td><%= new Date(t.fecha).toLocaleDateString('es-CO') %></td>
+        <td><%= t.tipo %></td>
+        <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><%= t.contraparte_nombre %></td>
+        <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<%= t.concepto %>"><%= t.concepto %></td>
+        <td class="text-right">$<%= Number(t.subtotal).toLocaleString('es-CO') %></td>
+        <td class="text-right">$<%= Number(t.iva).toLocaleString('es-CO') %></td>
+        <td class="text-right">$<%= Number(t.retencion).toLocaleString('es-CO') %></td>
+        <td class="text-right"><strong>$<%= Number(t.total).toLocaleString('es-CO') %></strong></td>
+        <td>
+          <span class="badge badge-<%= t.estado %>"><%= t.estado %></span>
+          <% if(t.es_caso_atipico){ %><span class="badge badge-atipico">Atípico</span><% } %>
+        </td>
+        <td>
+          <a href="/transacciones/<%= t.id %>" class="btn btn-secondary" style="padding:3px 8px; font-size:11px;">Ver</a>
+          <% if(t.editable){ %>
+            <a href="/transacciones/<%= t.id %>/editar" class="btn btn-secondary" style="padding:3px 8px; font-size:11px;">Editar</a>
+          <% } %>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<% if(ivaResumen && ivaResumen.length){ %>
+<div class="form-card">
+  <h3>Resumen IVA por bimestre</h3>
+  <table>
+    <thead>
+      <tr><th>Bimestre</th><th class="text-right">IVA generado</th><th class="text-right">IVA descontable</th><th class="text-right">Saldo</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% const bimNames = ['Ene-Feb','Mar-Abr','May-Jun','Jul-Ago','Sep-Oct','Nov-Dic']; %>
+      <% ivaResumen.forEach(r => { %>
+        <% const saldo = (r.iva_generado||0) - (r.iva_descontable||0); %>
+        <tr>
+          <td><%= bimNames[r.bimestre-1] %></td>
+          <td class="text-right">$<%= Number(r.iva_generado||0).toLocaleString('es-CO') %></td>
+          <td class="text-right">$<%= Number(r.iva_descontable||0).toLocaleString('es-CO') %></td>
+          <td class="text-right" style="color:<%= saldo>0 ? 'var(--red)' : 'var(--green)' %>">
+            $<%= Number(Math.abs(saldo)).toLocaleString('es-CO') %> <%= saldo>0 ? 'a pagar' : 'a favor' %>
+          </td>
+          <td><a href="/declaraciones/iva/<%= r.bimestre %>" class="btn btn-secondary" style="padding:3px 8px; font-size:11px;">Form. 300</a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<% } %>
+
+<%- include('../partials/footer') %>

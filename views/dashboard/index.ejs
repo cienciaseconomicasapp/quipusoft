@@ -1,0 +1,80 @@
+<%- include('../partials/header') %>
+<div class="page-header">
+  <h2>Panel de control</h2>
+  <p>Inversiones Uniatlantico S.A.S. &nbsp;|&nbsp; NIT: <%= empresa.nit %> &nbsp;|&nbsp; Año gravable 2025</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Ingresos brutos 2025</span>
+    <span class="stat-value">$<%= Number(resumen.total_ventas||0).toLocaleString('es-CO') %></span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Compras y costos 2025</span>
+    <span class="stat-value">$<%= Number(resumen.total_compras||0).toLocaleString('es-CO') %></span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">IVA generado 2025</span>
+    <span class="stat-value green">$<%= Number(resumen.iva_generado||0).toLocaleString('es-CO') %></span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">IVA descontable 2025</span>
+    <span class="stat-value blue">$<%= Number(resumen.iva_descontable||0).toLocaleString('es-CO') %></span>
+  </div>
+</div>
+
+<% if(parseInt(resumen.facturas_rechazadas) > 0 || parseInt(resumen.casos_atipicos) > 0){ %>
+<div class="alert-panel">
+  <h3>Alertas pedagógicas</h3>
+  <% if(parseInt(resumen.facturas_rechazadas) > 0){ %>
+    <div class="alert-item danger">
+      <%= resumen.facturas_rechazadas %> factura(s) rechazada(s) — Revisa el libro de transacciones (Semana 2)
+    </div>
+  <% } %>
+  <% if(parseInt(resumen.casos_atipicos) > 0){ %>
+    <div class="alert-item warning">
+      <%= resumen.casos_atipicos %> caso(s) atípico(s) detectado(s) en las transacciones — Analiza y corrige
+    </div>
+  <% } %>
+</div>
+<% } %>
+
+<% if(anticipos && anticipos.length){ %>
+<div class="alert-panel">
+  <h3>Anticipos con saldo pendiente</h3>
+  <% anticipos.forEach(a => { %>
+    <div class="alert-item warning">
+      <strong><%= a.documento %></strong> — <%= a.cliente_nombre %> —
+      Pendiente: $<%= Number(a.valor_pendiente).toLocaleString('es-CO') %>
+    </div>
+  <% }) %>
+</div>
+<% } %>
+
+<div class="quick-links">
+  <h3>Accesos rápidos</h3>
+  <div class="links-grid">
+    <a href="/transacciones" class="quick-link">Ver transacciones</a>
+    <a href="/transacciones/nueva/form" class="quick-link">Nueva transacción</a>
+    <a href="/nomina" class="quick-link">Liquidar nómina</a>
+    <a href="/declaraciones/iva/1" class="quick-link">Form. 300 — IVA</a>
+    <a href="/declaraciones/retencion/1" class="quick-link">Form. 350 — Retención</a>
+    <a href="/declaraciones/renta" class="quick-link">Form. 110 — Renta</a>
+    <a href="/transacciones/exportar/mokanatax" class="quick-link accent">Exportar a MokanaTax</a>
+    <a href="<%= mokanataxUrl %>" target="_blank" class="quick-link accent">Ir a MokanaTax</a>
+  </div>
+</div>
+
+<div class="empresa-info">
+  <h3>Información de la empresa</h3>
+  <div class="info-grid">
+    <div><span>Razón social</span><strong><%= empresa.razon_social %></strong></div>
+    <div><span>NIT</span><strong><%= empresa.nit %></strong></div>
+    <div><span>Representante legal</span><strong><%= empresa.representante_legal %></strong></div>
+    <div><span>CIIU principal</span><strong><%= empresa.ciiu_principal %> — Comercio al por mayor</strong></div>
+    <div><span>CIIU secundario</span><strong><%= empresa.ciiu_secundario %> — Consultoría empresarial</strong></div>
+    <div><span>Régimen</span><strong><%= empresa.regimen %></strong></div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

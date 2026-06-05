@@ -1,12 +1,30 @@
 {
   "name": "quipusoft",
   "version": "1.0.0",
-  "description": "Software contable académico - Diplomado U. Atlántico 2026",
-  "main": "index.js",
+  "description": "Software contable académico - Diplomado Gerencia y Administración Tributaria - Universidad del Atlántico 2026",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "seed": "node src/config/seed.js"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "pg": "^8.11.3",
+    "ejs": "^3.1.9",
+    "connect-pg-simple": "^9.0.1",
+    "dotenv": "^16.3.1",
+    "express-flash": "^0.0.2",
+    "method-override": "^3.0.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
   }
 }

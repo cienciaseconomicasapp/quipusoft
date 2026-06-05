@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <span class="brand-icon">Q</span>
+      <span class="brand-name">Quipusoft</span>
+      <span class="brand-sub">Software Contable Académico</span>
+    </div>
+    <div class="navbar-links">
+      <a href="/dashboard">Inicio</a>
+      <a href="/transacciones">Transacciones</a>
+      <a href="/nomina">Nómina</a>
+      <a href="/declaraciones">Declaraciones</a>
+      <a href="<%= mokanataxUrl %>" target="_blank" class="btn-mokanatax">Ir a MokanaTax</a>
+    </div>
+    <div class="navbar-user">
+      <% if(user && user.foto){ %>
+        <img src="<%= user.foto %>" alt="<%= user.nombre %>" class="user-avatar">
+      <% } %>
+      <span class="user-name"><%= user ? user.nombre.split(' ')[0] : '' %></span>
+      <a href="/auth/logout" class="btn-logout">Salir</a>
+    </div>
+  </nav>
+  <main class="main-content">
+    <% if(success && success.length){ %>
+      <div class="alert alert-success"><%= success %></div>
+    <% } %>
+    <% if(error && error.length){ %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
