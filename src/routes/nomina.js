@@ -13,10 +13,10 @@ router.get('/', requireAuth, setSchema, async (req, res) => {
   const schema = req.schema;
   const mes = parseInt(req.query.mes) || 1;
   try {
-    const empleados = await pool.query(`SELECT * FROM ${schema}.empleados WHERE activo = TRUE ORDER BY numero`);
+    const empleados = await pool.query(`SELECT * FROM "${schema}".empleados WHERE activo = TRUE ORDER BY numero`);
     const nominaMes = await pool.query(
-      `SELECT n.*, e.nombre, e.cargo FROM ${schema}.nomina n
-       JOIN ${schema}.empleados e ON n.empleado_id = e.id
+      `SELECT n.*, e.nombre, e.cargo FROM "${schema}".nomina n
+       JOIN "${schema}".empleados e ON n.empleado_id = e.id
        WHERE n.mes = $1 AND n.anno = 2025 ORDER BY e.numero`,
       [mes]
     );
@@ -54,12 +54,12 @@ router.post('/generar-documento/:mes', requireAuth, setSchema, async (req, res) 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const empleados = await client.query(`SELECT * FROM ${schema}.empleados WHERE activo = TRUE`);
+    const empleados = await client.query(`SELECT * FROM "${schema}".empleados WHERE activo = TRUE`);
 
     for (const emp of empleados.rows) {
       const n = calcularNomina(emp, mes);
       await client.query(`
-        INSERT INTO ${schema}.nomina
+        INSERT INTO "${schema}".nomina
         (empleado_id, mes, anno, salario_basico, auxilio_transporte, total_devengado,
          descuento_salud, descuento_pension, retencion_fuente, total_deducciones,
          neto_pagar, aporte_salud_empleador, aporte_pension_empleador, aporte_arl,

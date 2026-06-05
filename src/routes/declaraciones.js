@@ -24,7 +24,7 @@ router.get('/iva/:bimestre', requireAuth, setSchema, async (req, res) => {
         SUM(CASE WHEN (tipo LIKE 'Factura venta%' OR tipo='Nota débito') AND iva > 0 THEN iva ELSE 0 END) AS iva_generado,
         SUM(CASE WHEN tipo='Nota crédito' AND iva < 0 THEN ABS(iva) ELSE 0 END) AS iva_devoluciones,
         SUM(CASE WHEN (tipo LIKE 'Factura compra%' OR tipo='Activo fijo') AND iva > 0 THEN iva ELSE 0 END) AS iva_descontable
-      FROM ${schema}.transacciones
+      FROM "${schema}".transacciones
       WHERE anno = 2025 AND mes BETWEEN $1 AND $2
         AND estado = 'vigente'
         AND tipo NOT IN ('Resumen mes','Nómina electrónica','Gasto sin soporte')
@@ -75,7 +75,7 @@ router.get('/retencion/:mes', requireAuth, setSchema, async (req, res) => {
             ELSE 'Compras (3.5%)'
           END AS concepto_agrupado,
           retencion, subtotal
-        FROM ${schema}.transacciones
+        FROM "${schema}".transacciones
         WHERE anno = 2025 AND mes = $1
           AND tipo LIKE 'Factura compra%'
           AND retencion < 0
@@ -111,17 +111,17 @@ router.get('/renta', requireAuth, setSchema, async (req, res) => {
         SUM(CASE WHEN tipo='Nota crédito' THEN ABS(subtotal) ELSE 0 END) AS devoluciones,
         SUM(CASE WHEN tipo LIKE 'Factura compra%' AND estado='vigente' THEN subtotal ELSE 0 END) AS compras,
         SUM(CASE WHEN tipo='Gasto sin soporte' THEN subtotal ELSE 0 END) AS gastos_no_deducibles
-      FROM ${schema}.transacciones WHERE anno=2025
+      FROM "${schema}".transacciones WHERE anno=2025
     `);
 
     const nominaAnual = await pool.query(`
       SELECT SUM(costo_total_empleador) AS total_nomina
-      FROM ${schema}.nomina WHERE anno=2025
+      FROM "${schema}".nomina WHERE anno=2025
     `);
 
     const activos = await pool.query(`
       SELECT SUM(depreciacion_acumulada) AS depreciacion_total
-      FROM ${schema}.activos_fijos
+      FROM "${schema}".activos_fijos
     `);
 
     const d = result.rows[0];
