@@ -1,0 +1,109 @@
+<%- include('../partials/header', {title: title}) %>
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
+  <div>
+    <h2>Nómina electrónica</h2>
+    <p>Inversiones Uniatlantico S.A.S. &nbsp;|&nbsp; SMMLV 2025: $1.423.500 &nbsp;|&nbsp; Aux. transporte: $200.000</p>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <select onchange="location.href='/nomina?mes='+this.value" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+      <% ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].forEach((m,i) => { %>
+        <option value="<%= i+1 %>" <%= mes==i+1 ? 'selected' : '' %>><%= m %> 2025</option>
+      <% }) %>
+    </select>
+    <form method="POST" action="/nomina/generar-documento/<%= mes %>">
+      <button type="submit" class="btn btn-primary">Generar documento soporte</button>
+    </form>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Total neto a pagar</span>
+    <span class="stat-value green">$<%= Number(totalNomina).toLocaleString('es-CO') %></span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Costo total empresa</span>
+    <span class="stat-value red">$<%= Number(totalCostoEmpresa).toLocaleString('es-CO') %></span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Empleados activos</span>
+    <span class="stat-value"><%= nomina.length %></span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">UVT 2025</span>
+    <span class="stat-value blue" style="font-size:16px;">$<%= Number(UVT_2025).toLocaleString('es-CO') %></span>
+  </div>
+</div>
+
+<div class="tip-box" style="background:#EBF5FB;border-left:4px solid #2E75B6;padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:1rem;">
+  <strong>Art. 114-1 ET:</strong> Inversiones Uniatlantico S.A.S. (S.A.S.) está <strong>exonerada</strong> de aportes a EPS empleador (8,5%), SENA (2%) e ICBF (3%) para trabajadores que devenguen menos de 10 SMMLV ($14.235.000).
+  El tope para retención en la fuente por salarios es 95 UVT = $<%= Number(95 * UVT_2025).toLocaleString('es-CO') %>.
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Empleado</th>
+        <th>Cargo</th>
+        <th class="text-right">Salario básico</th>
+        <th class="text-right">Aux. transporte</th>
+        <th class="text-right">Total devengado</th>
+        <th class="text-right">(-) Salud</th>
+        <th class="text-right">(-) Pensión</th>
+        <th class="text-right">(-) Ret. fuente</th>
+        <th class="text-right">Neto a pagar</th>
+        <th class="text-right">Costo empresa</th>
+        <th class="text-center">Doc. soporte</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% nomina.forEach((n, i) => { %>
+      <tr>
+        <td><%= i + 1 %></td>
+        <td><strong><%= n.nombre %></strong></td>
+        <td style="font-size:12px;color:var(--muted)"><%= n.cargo %></td>
+        <td class="text-right">$<%= Number(n.salario_basico).toLocaleString('es-CO') %></td>
+        <td class="text-right"><%= n.auxilio_transporte > 0 ? '$' + Number(n.auxilio_transporte).toLocaleString('es-CO') : '—' %></td>
+        <td class="text-right"><strong>$<%= Number(n.total_devengado).toLocaleString('es-CO') %></strong></td>
+        <td class="text-right" style="color:var(--red)">($<%= Number(n.descuento_salud).toLocaleString('es-CO') %>)</td>
+        <td class="text-right" style="color:var(--red)">($<%= Number(n.descuento_pension).toLocaleString('es-CO') %>)</td>
+        <td class="text-right" style="color:var(--red)"><%= n.retencion_fuente > 0 ? '($' + Number(n.retencion_fuente).toLocaleString('es-CO') + ')' : '$0' %></td>
+        <td class="text-right"><strong style="color:var(--green)">$<%= Number(n.neto_pagar).toLocaleString('es-CO') %></strong></td>
+        <td class="text-right" style="color:var(--red)">$<%= Number(n.costo_total_empleador).toLocaleString('es-CO') %></td>
+        <td class="text-center">
+          <span class="badge <%= n.documento_soporte_generado ? 'badge-vigente' : 'badge-borrador' %>">
+            <%= n.documento_soporte_generado ? 'Generado' : 'Pendiente' %>
+          </span>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+    <tfoot>
+      <tr style="background:var(--blue-light);font-weight:600;">
+        <td colspan="5" style="padding:8px 12px;text-align:right;">TOTALES</td>
+        <td class="text-right">$<%= Number(nomina.reduce((a,n)=>a+n.total_devengado,0)).toLocaleString('es-CO') %></td>
+        <td class="text-right" style="color:var(--red)">($<%= Number(nomina.reduce((a,n)=>a+n.descuento_salud,0)).toLocaleString('es-CO') %>)</td>
+        <td class="text-right" style="color:var(--red)">($<%= Number(nomina.reduce((a,n)=>a+n.descuento_pension,0)).toLocaleString('es-CO') %>)</td>
+        <td class="text-right" style="color:var(--red)">($<%= Number(nomina.reduce((a,n)=>a+n.retencion_fuente,0)).toLocaleString('es-CO') %>)</td>
+        <td class="text-right" style="color:var(--green)">$<%= Number(totalNomina).toLocaleString('es-CO') %></td>
+        <td class="text-right" style="color:var(--red)">$<%= Number(totalCostoEmpresa).toLocaleString('es-CO') %></td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="form-card" style="margin-top:1rem;">
+  <h3>Aportes empleador — Res. 000013/2021 (Nómina electrónica)</h3>
+  <div class="info-grid">
+    <div><span>Pensión empleador (12%)</span><strong>$<%= Number(nomina.reduce((a,n)=>a+n.aporte_pension_empleador,0)).toLocaleString('es-CO') %></strong></div>
+    <div><span>Salud empleador (8,5% — solo aplica > 10 SMMLV)</span><strong>$<%= Number(nomina.reduce((a,n)=>a+n.aporte_salud_empleador,0)).toLocaleString('es-CO') %></strong></div>
+    <div><span>ARL (Clase I: 0,522% / Clase II: 1,044%)</span><strong>$<%= Number(nomina.reduce((a,n)=>a+n.aporte_arl,0)).toLocaleString('es-CO') %></strong></div>
+    <div><span>SENA (2%) — EXONERADO Art. 114-1 ET</span><strong style="color:var(--green)">$0</strong></div>
+    <div><span>ICBF (3%) — EXONERADO Art. 114-1 ET</span><strong style="color:var(--green)">$0</strong></div>
+    <div><span>Caja compensación (4%) — EXONERADO Art. 114-1 ET</span><strong style="color:var(--green)">$0</strong></div>
+  </div>
+</div>
+<%- include('../partials/footer') %>

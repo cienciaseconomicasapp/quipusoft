@@ -1,0 +1,76 @@
+<%- include('../partials/header', {title: title}) %>
+<div class="page-header">
+  <h2>Nueva transacción</h2>
+  <p>Inversiones Uniatlantico S.A.S. &nbsp;|&nbsp; Año gravable 2025</p>
+</div>
+
+<% if(error && error.length){ %>
+  <div class="alert alert-error"><%= error %></div>
+<% } %>
+
+<div class="form-card">
+  <form method="POST" action="/transacciones/nueva">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Número de documento</label>
+        <input type="text" name="documento" placeholder="FV-100" required>
+      </div>
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="date" name="fecha" required min="2025-01-01" max="2025-12-31">
+      </div>
+      <div class="form-group">
+        <label>Tipo de transacción</label>
+        <select name="tipo" required>
+          <option value="">Seleccionar...</option>
+          <option value="Factura venta">Factura de venta</option>
+          <option value="Factura venta consultoría">Factura venta consultoría</option>
+          <option value="Factura compra">Factura de compra</option>
+          <option value="Nota crédito">Nota crédito</option>
+          <option value="Nota débito">Nota débito</option>
+          <option value="Documento soporte">Documento soporte</option>
+          <option value="Activo fijo">Activo fijo</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tipo de IVA</label>
+        <select name="tipo_iva">
+          <option value="gravado">Gravado (19%)</option>
+          <option value="exento">Exento (0%)</option>
+          <option value="excluido">Excluido</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Contraparte (cliente o proveedor)</label>
+      <input type="text" name="contraparte_nombre" placeholder="Nombre del cliente o proveedor" required>
+    </div>
+    <div class="form-group">
+      <label>Concepto</label>
+      <input type="text" name="concepto" placeholder="Descripción de la transacción" required>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Subtotal (sin IVA)</label>
+        <input type="number" id="subtotal" name="subtotal" placeholder="0" min="0" required>
+      </div>
+      <div class="form-group">
+        <label>IVA</label>
+        <input type="number" id="iva" name="iva" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Retención (valor negativo)</label>
+        <input type="number" id="retencion" name="retencion" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Total calculado</label>
+        <div id="total_calculado" style="padding:8px 12px;background:var(--gray);border-radius:6px;font-weight:600;font-size:14px;">$0</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button type="submit" class="btn btn-primary">Guardar transacción</button>
+      <a href="/transacciones" class="btn btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+<%- include('../partials/footer') %>
