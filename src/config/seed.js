@@ -7,6 +7,17 @@ async function initDB() {
     console.log('Iniciando configuración de base de datos...');
     await client.query('BEGIN');
 
+    // Tabla de sesiones (requerida por connect-pg-simple)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "session" (
+        "sid" varchar NOT NULL COLLATE "default",
+        "sess" json NOT NULL,
+        "expire" timestamp(6) NOT NULL,
+        CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");`);
+
     // Tabla de usuarios (schema público)
     await client.query(`
       CREATE TABLE IF NOT EXISTS usuarios (
