@@ -1,0 +1,230 @@
+<%- include('../partials/header', {title: title}) %>
+<style>
+/* ── Layout ── */
+.tx-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;flex-wrap:wrap;gap:12px;}
+.tx-header h2{font-size:20px;font-weight:600;margin:0;}
+.tx-header p{font-size:12px;color:var(--muted);margin:4px 0 0;}
+
+/* ── Filtros ── */
+.filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;background:var(--card-bg,#fff);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:1.25rem;}
+.filtro-g{display:flex;flex-direction:column;gap:3px;min-width:120px;}
+.filtro-g label{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.filtro-g select,.filtro-g input{border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;}
+.btn-filtrar{padding:6px 16px;background:#1F3864;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;align-self:flex-end;}
+.btn-limpiar{padding:6px 12px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;align-self:flex-end;text-decoration:none;}
+
+/* ── Resumen IVA ── */
+.iva-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:1.25rem;}
+.iva-card{border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center;background:var(--card-bg,#fff);}
+.iva-card-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+.iva-gen{font-size:12px;color:#1E8449;font-weight:600;}
+.iva-desc{font-size:12px;color:#C0392B;font-weight:600;}
+.iva-saldo{font-size:11px;font-weight:700;margin-top:4px;padding:2px 0;border-top:1px solid #eee;}
+.iva-saldo.pagar{color:#C0392B;}.iva-saldo.favor{color:#1E8449;}
+
+/* ── Tabla ── */
+.tx-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
+.tx-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:800px;}
+.tx-table thead th{background:#1F3864;color:#fff;padding:9px 10px;white-space:nowrap;font-weight:500;position:sticky;top:0;}
+.tx-table thead th.r{text-align:right;}
+.tx-table thead th.c{text-align:center;}
+.tx-table tbody tr:nth-child(even) td{background:#F8FAFC;}
+.tx-table tbody tr:hover td{background:#EBF5FB;}
+.tx-table tbody tr.caso-atipico td{border-left:3px solid #E67E22;}
+.tx-table tbody tr.caso-atipico td:first-child{border-left:3px solid #E67E22;}
+.tx-table td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
+.tx-table td.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.tx-table td.c{text-align:center;}
+.tx-table tfoot td{background:#E8EAF6;font-weight:700;padding:8px 10px;border-top:2px solid #1F3864;white-space:nowrap;}
+.tx-table tfoot td.r{text-align:right;}
+
+/* ── Badges ── */
+.badge-tipo{display:inline-block;font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600;white-space:nowrap;}
+.badge-venta{background:#D5E8D4;color:#1E5631;}
+.badge-compra{background:#FADBD8;color:#7B0000;}
+.badge-nomina{background:#EBF5FB;color:#1F3864;}
+.badge-resumen{background:#F5EEF8;color:#6C3483;}
+.badge-otro{background:#F0F0F0;color:#555;}
+.badge-atipico{background:#FDEBD0;color:#784212;font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600;display:inline-block;margin-left:4px;}
+.badge-estado{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600;display:inline-block;}
+.badge-vigente{background:#D5E8D4;color:#1E5631;}
+.badge-atipico-est{background:#FDEBD0;color:#784212;}
+.badge-anulado{background:#F5F5F5;color:#888;}
+
+/* ── Botón ajuste ── */
+.btn-ajuste-tx{font-size:10px;background:#1F3864;color:#fff;border:none;padding:3px 9px;border-radius:6px;cursor:pointer;text-decoration:none;white-space:nowrap;display:inline-block;}
+.btn-ajuste-tx:hover{background:#2E75B6;}
+.texto-corregido{font-size:10px;color:#1E8449;font-weight:600;}
+
+/* ── Valores ── */
+.val-pos{color:#1E8449;}.val-neg{color:#C0392B;}.val-ret{color:#E67E22;}
+
+/* ── Nota pedagógica ── */
+.nota-ped{font-size:11px;color:#7D4900;background:#FFF3CD;border-left:3px solid #F0AD4E;padding:3px 8px;border-radius:0 4px 4px 0;margin-top:3px;display:block;}
+
+@media(max-width:700px){.iva-grid{grid-template-columns:repeat(3,1fr);}.filtros{flex-direction:column;}}
+</style>
+
+<div class="tx-header">
+  <div>
+    <h2>Libro de transacciones</h2>
+    <p>Inversiones Uniatlantico S.A.S. · AG 2025 · <%= transacciones.length %> registros</p>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <a href="/transacciones/nueva/form" class="btn btn-primary" style="font-size:13px;padding:7px 14px;">+ Nueva transacción</a>
+  </div>
+</div>
+
+<!-- FILTROS -->
+<form method="GET" action="/transacciones" class="filtros">
+  <div class="filtro-g">
+    <label>Mes</label>
+    <select name="mes">
+      <option value="">Todos</option>
+      <% ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].forEach((m,i)=>{ %>
+        <option value="<%= i+1 %>" <%= filtros.mes==i+1?'selected':'' %>><%= m %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="filtro-g">
+    <label>Tipo</label>
+    <select name="tipo">
+      <option value="">Todos</option>
+      <% ['Factura venta','Factura compra','Nómina electrónica','Nota débito','Nota crédito','Resumen mes'].forEach(t=>{ %>
+        <option value="<%= t %>" <%= filtros.tipo===t?'selected':'' %>><%= t %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="filtro-g">
+    <label>Estado</label>
+    <select name="estado">
+      <option value="">Todos</option>
+      <option value="vigente" <%= filtros.estado==='vigente'?'selected':'' %>>Vigente</option>
+      <option value="atipico" <%= filtros.estado==='atipico'?'selected':'' %>>Caso atípico</option>
+      <option value="anulado" <%= filtros.estado==='anulado'?'selected':'' %>>Anulado</option>
+    </select>
+  </div>
+  <button type="submit" class="btn-filtrar">Filtrar</button>
+  <a href="/transacciones" class="btn-limpiar">Limpiar</a>
+</form>
+
+<!-- RESUMEN IVA POR BIMESTRE -->
+<% if(ivaResumen && ivaResumen.length){ %>
+<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Resumen IVA por bimestre — Form. 300</div>
+<div class="iva-grid">
+  <% const BIMS = ['Ene-Feb','Mar-Abr','May-Jun','Jul-Ago','Sep-Oct','Nov-Dic']; %>
+  <% for(let b=1; b<=6; b++){
+    const bim = ivaResumen.find(r=>parseInt(r.bimestre)===b);
+    const gen  = bim ? parseInt(bim.iva_generado)||0 : 0;
+    const desc = bim ? parseInt(bim.iva_descontable)||0 : 0;
+    const saldo = gen - desc;
+  %>
+  <div class="iva-card">
+    <div class="iva-card-title">Bim. <%= b %> · <%= BIMS[b-1] %></div>
+    <div class="iva-gen">+$<%= gen.toLocaleString('es-CO') %></div>
+    <div class="iva-desc">-$<%= desc.toLocaleString('es-CO') %></div>
+    <div class="iva-saldo <%= saldo>=0?'pagar':'favor' %>">
+      <%= saldo>=0?'Pagar':'A favor' %>: $<%= Math.abs(saldo).toLocaleString('es-CO') %>
+    </div>
+  </div>
+  <% } %>
+</div>
+<% } %>
+
+<!-- TABLA DE TRANSACCIONES -->
+<div class="tx-table-wrap">
+<table class="tx-table">
+  <thead>
+    <tr>
+      <th style="width:90px">Fecha</th>
+      <th style="width:110px">Documento</th>
+      <th>Tipo</th>
+      <th>Contraparte / Concepto</th>
+      <th class="r" style="width:120px">Subtotal</th>
+      <th class="r" style="width:110px">IVA</th>
+      <th class="r" style="width:110px">Retención</th>
+      <th class="r" style="width:120px">Total</th>
+      <th class="c" style="width:90px">Estado</th>
+      <th class="c" style="width:90px">Acción</th>
+    </tr>
+  </thead>
+  <tbody>
+  <%
+  const totSub = transacciones.reduce((a,t)=>a+(parseInt(t.subtotal)||0),0);
+  const totIva = transacciones.reduce((a,t)=>a+(parseInt(t.iva)||0),0);
+  const totRet = transacciones.reduce((a,t)=>a+(parseInt(t.retencion)||0),0);
+  const totTot = transacciones.reduce((a,t)=>a+(parseInt(t.total)||0),0);
+
+  transacciones.forEach(t => {
+    const sub  = parseInt(t.subtotal)||0;
+    const iva  = parseInt(t.iva)||0;
+    const ret  = parseInt(t.retencion)||0;
+    const tot  = parseInt(t.total)||0;
+    const esAtipico = t.es_caso_atipico || t.estado === 'atipico';
+    const badgeTipo = t.tipo && t.tipo.toLowerCase().includes('venta') ? 'venta'
+                    : t.tipo && t.tipo.toLowerCase().includes('compra') ? 'compra'
+                    : t.tipo && t.tipo.toLowerCase().includes('nomina') ? 'nomina'
+                    : t.tipo && t.tipo.toLowerCase().includes('resumen') ? 'resumen'
+                    : 'otro';
+  %>
+  <tr class="<%= esAtipico ? 'caso-atipico' : '' %>">
+    <td style="font-size:12px;color:var(--muted);white-space:nowrap;">
+      <%= new Date(t.fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'2-digit'}) %>
+    </td>
+    <td><code style="font-size:11px;"><%= t.documento %></code></td>
+    <td>
+      <span class="badge-tipo badge-<%= badgeTipo %>"><%= t.tipo %></span>
+      <% if(esAtipico && t.codigo_caso){ %>
+        <span class="badge-atipico">⚠ <%= t.codigo_caso %></span>
+      <% } %>
+    </td>
+    <td>
+      <div style="font-size:13px;font-weight:500;"><%= t.contraparte_nombre %></div>
+      <div style="font-size:11px;color:var(--muted);"><%= t.concepto ? t.concepto.substring(0,60)+(t.concepto.length>60?'…':'') : '' %></div>
+      <% if(esAtipico && t.notas_pedagogicas){ %>
+        <span class="nota-ped">📌 <%= t.notas_pedagogicas.substring(0,80)+(t.notas_pedagogicas.length>80?'…':'') %></span>
+      <% } %>
+    </td>
+    <td class="r">$<%= sub.toLocaleString('es-CO') %></td>
+    <td class="r <%= iva>0?'val-pos':'' %>"><%= iva!==0?(iva>0?'+':'')+iva.toLocaleString('es-CO') : '—' %></td>
+    <td class="r val-ret"><%= ret!==0?ret.toLocaleString('es-CO') : '—' %></td>
+    <td class="r"><strong>$<%= tot.toLocaleString('es-CO') %></strong></td>
+    <td class="c">
+      <span class="badge-estado badge-<%= t.estado==='atipico'?'atipico-est':t.estado==='anulado'?'anulado':'vigente' %>">
+        <%= t.estado || 'vigente' %>
+      </span>
+    </td>
+    <td class="c">
+      <% if(esAtipico && t.estado !== 'anulado'){ %>
+        <%
+          // Buscar si hay asiento contable relacionado para el ajuste
+          // La acción apunta al libro diario para que corrijan desde allí
+        %>
+        <a href="/contabilidad/libro-diario?desde=<%= new Date(t.fecha).toISOString().split('T')[0] %>&hasta=<%= new Date(t.fecha).toISOString().split('T')[0] %>"
+           class="btn-ajuste-tx">Ver en libro</a>
+      <% } else if(t.editable){ %>
+        <a href="/transacciones/<%= t.id %>/editar" style="font-size:11px;color:var(--muted);">✏ Editar</a>
+      <% } %>
+    </td>
+  </tr>
+  <% }) %>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="4" style="text-align:right;font-size:12px;letter-spacing:.03em;">TOTALES (<%= transacciones.length %> registros)</td>
+      <td class="r">$<%= totSub.toLocaleString('es-CO') %></td>
+      <td class="r">$<%= totIva.toLocaleString('es-CO') %></td>
+      <td class="r">$<%= totRet.toLocaleString('es-CO') %></td>
+      <td class="r">$<%= totTot.toLocaleString('es-CO') %></td>
+      <td colspan="2"></td>
+    </tr>
+  </tfoot>
+</table>
+</div>
+
+<div style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;gap:20px;flex-wrap:wrap;">
+  <span>🟠 Transacciones con borde naranja = casos atípicos pedagógicos</span>
+  <span>Para registrar ajustes contables ve a <a href="/contabilidad/libro-diario" style="color:#1F3864;font-weight:600;">Libros contables → Libro diario</a> y busca el asiento marcado con ⚠</span>
+</div>
+
+<%- include('../partials/footer') %>

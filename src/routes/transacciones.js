@@ -30,7 +30,7 @@ router.get('/', requireAuth, setSchema, async (req, res) => {
       ORDER BY bimestre
     `, []);
 
-    res.render('facturas/index', {
+    res.render('transacciones/index', {
       title: 'Libro de transacciones — Quipusoft',
       user: req.user,
       transacciones: result.rows,
