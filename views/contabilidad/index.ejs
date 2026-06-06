@@ -1,0 +1,52 @@
+<%- include('../partials/header') %>
+<div class="page-header">
+  <div>
+    <h2>Libros contables</h2>
+    <p>Inversiones Uniatlantico S.A.S. — NIT 900.123.456-7 — AG 2025</p>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:1rem;">
+
+  <a href="/contabilidad/plan-cuentas" class="card-libro">
+    <div class="card-libro-icon">📋</div>
+    <div class="card-libro-title">Plan de Cuentas</div>
+    <div class="card-libro-sub">PUC — 134 cuentas activas</div>
+  </a>
+
+  <a href="/contabilidad/libro-diario" class="card-libro">
+    <div class="card-libro-icon">📒</div>
+    <div class="card-libro-title">Libro Diario</div>
+    <div class="card-libro-sub">Asientos cronológicos con filtro de fechas</div>
+  </a>
+
+  <a href="/contabilidad/libro-mayor" class="card-libro">
+    <div class="card-libro-icon">📗</div>
+    <div class="card-libro-title">Libro Mayor</div>
+    <div class="card-libro-sub">Saldos por cuenta — débitos y créditos</div>
+  </a>
+
+  <a href="/contabilidad/libro-auxiliar" class="card-libro">
+    <div class="card-libro-icon">📘</div>
+    <div class="card-libro-title">Libro Auxiliar</div>
+    <div class="card-libro-sub">Movimiento detallado por cuenta</div>
+  </a>
+
+  <a href="/contabilidad/balance-comprobacion" class="card-libro">
+    <div class="card-libro-icon">⚖️</div>
+    <div class="card-libro-title">Balance de Comprobación</div>
+    <div class="card-libro-sub">Sumas y saldos a una fecha</div>
+  </a>
+
+</div>
+
+<style>
+.card-libro { display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--card-bg,#fff);border:1px solid #ddd;border-radius:12px;padding:2rem 1rem;
+  text-decoration:none;color:inherit;transition:box-shadow .2s,border-color .2s;text-align:center; }
+.card-libro:hover { box-shadow:0 4px 16px rgba(0,0,0,.10);border-color:#2E75B6; }
+.card-libro-icon { font-size:2.5rem;margin-bottom:.5rem; }
+.card-libro-title { font-size:15px;font-weight:600;color:#1F3864;margin-bottom:.25rem; }
+.card-libro-sub { font-size:12px;color:#666; }
+</style>
+<%- include('../partials/footer') %>

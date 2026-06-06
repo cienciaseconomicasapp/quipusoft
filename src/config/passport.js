@@ -97,6 +97,14 @@ async function crearSchemaEstudiante(userId) {
   } finally {
     client.release();
   }
+
+  // Crear schema contable (plan de cuentas + asientos AG 2025)
+  try {
+    const { crearSchemaContable } = require('./schema_contable');
+    await crearSchemaContable(userId);
+  } catch (err) {
+    console.error('Error creando schema contable:', err.message);
+  }
 }
 
 module.exports = { passport };

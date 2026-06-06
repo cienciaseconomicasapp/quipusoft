@@ -1,0 +1,44 @@
+<%- include('../partials/header') %>
+<div class="page-header">
+  <div><h2>Plan de Cuentas — PUC</h2><p>Inversiones Uniatlantico S.A.S. — Empresa comercial</p></div>
+  <a href="/contabilidad" class="btn btn-secondary">← Volver</a>
+</div>
+
+<div class="table-responsive" style="margin-top:1rem;">
+<table class="tabla-libros">
+  <thead><tr>
+    <th style="width:120px">Código</th>
+    <th>Nombre de la cuenta</th>
+    <th style="width:80px">Naturaleza</th>
+    <th style="width:100px">Nivel</th>
+  </tr></thead>
+  <tbody>
+  <% cuentas.forEach(c => { %>
+    <tr class="nivel-<%= c.tipo %>">
+      <td><code style="font-size:12px;"><%= c.codigo %></code></td>
+      <td style="padding-left:<%= (c.codigo.length - 1) * 10 %>px"><%= c.nombre %></td>
+      <td style="text-align:center;">
+        <span class="badge-nat <%= c.naturaleza === 'D' ? 'deb' : 'cred' %>">
+          <%= c.naturaleza === 'D' ? 'Débito' : 'Crédito' %>
+        </span>
+      </td>
+      <td style="text-align:center;font-size:11px;color:#666;text-transform:capitalize;"><%= c.tipo %></td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>
+</div>
+
+<style>
+.tabla-libros { width:100%;border-collapse:collapse;font-size:13px; }
+.tabla-libros th { background:#1F3864;color:#fff;padding:8px 10px;text-align:left; }
+.tabla-libros td { padding:5px 10px;border-bottom:1px solid #eee; }
+.nivel-clase td { background:#E8EAF6;font-weight:700;font-size:14px; }
+.nivel-grupo td { background:#EBF5FB;font-weight:600; }
+.nivel-cuenta td { background:#fff; }
+.nivel-subcuenta td { background:#FAFAFA;font-size:12px; }
+.badge-nat { font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600; }
+.badge-nat.deb { background:#FDE8D8;color:#7D4900; }
+.badge-nat.cred { background:#D5E8D4;color:#1E5631; }
+</style>
+<%- include('../partials/footer') %>
