@@ -1,193 +1,141 @@
 <%- include('../partials/header', {title: title}) %>
-
 <%
-// Función de formato segura — evita NaN y strings mal parseados
-function fmt(v) {
-  const n = parseInt(v) || 0;
-  return '$' + n.toLocaleString('es-CO');
-}
-function fmtN(v) {
-  const n = parseInt(v) || 0;
-  return n.toLocaleString('es-CO');
-}
-const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const SMMLV = 1423500;
-const AUX   = 202050;
-const UVT   = 49799;
-
-// Recalcular totales seguros
-const totDev  = nomina.reduce((a,n)=>a+(parseInt(n.total_devengado)||0),0);
-const totSal  = nomina.reduce((a,n)=>a+(parseInt(n.descuento_salud)||0),0);
-const totPen  = nomina.reduce((a,n)=>a+(parseInt(n.descuento_pension)||0),0);
-const totRet  = nomina.reduce((a,n)=>a+(parseInt(n.retencion_fuente)||0),0);
-const totNeto = nomina.reduce((a,n)=>a+(parseInt(n.neto_pagar)||0),0);
-const totCost = nomina.reduce((a,n)=>a+(parseInt(n.costo_total_empleador)||0),0);
-const totPenEmp = nomina.reduce((a,n)=>a+(parseInt(n.aporte_pension_empleador)||0),0);
-const totSalEmp = nomina.reduce((a,n)=>a+(parseInt(n.aporte_salud_empleador)||0),0);
-const totArl    = nomina.reduce((a,n)=>a+(parseInt(n.aporte_arl)||0),0);
+function n(v){ return parseInt(v)||0; }
+function fmt(v){ return '$'+n(v).toLocaleString('es-CO'); }
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const SMMLV=1423500, AUX=202050, UVT=49799;
+// Recalcular devengado correctamente (salario + auxilio, sin acumular erróneamente la BD)
+const totDev  = nomina.reduce((a,x)=>a+n(x.salario_basico)+n(x.auxilio_transporte),0);
+const totSal  = nomina.reduce((a,x)=>a+n(x.descuento_salud),0);
+const totPen  = nomina.reduce((a,x)=>a+n(x.descuento_pension),0);
+const totRet  = nomina.reduce((a,x)=>a+n(x.retencion_fuente),0);
+const totNeto = nomina.reduce((a,x)=>a+n(x.neto_pagar),0);
+const totPenEmp=nomina.reduce((a,x)=>a+n(x.aporte_pension_empleador),0);
+const totSalEmp=nomina.reduce((a,x)=>a+n(x.aporte_salud_empleador),0);
+const totArl   =nomina.reduce((a,x)=>a+n(x.aporte_arl),0);
+const totCost  = nomina.reduce((a,x)=>a+n(x.salario_basico)+n(x.auxilio_transporte)+n(x.aporte_pension_empleador)+n(x.aporte_salud_empleador)+n(x.aporte_arl),0);
 %>
-
 <style>
-.nom-header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;flex-wrap:wrap;gap:12px; }
-.nom-title h2 { font-size:20px;font-weight:600;margin:0; }
-.nom-title p { font-size:12px;color:var(--muted);margin:4px 0 0; }
-.nom-controls { display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
-.nom-controls select { padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px; }
-
-.kpis { display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem; }
-.kpi { background:var(--card-bg,#fff);border:1px solid var(--border);border-radius:10px;padding:14px 16px; }
-.kpi-label { font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px; }
-.kpi-val { font-size:22px;font-weight:700;line-height:1; }
-.kpi-val.green { color:#1E8449; }
-.kpi-val.red   { color:#C0392B; }
-.kpi-val.blue  { color:#1F3864; }
-
-.alerta-box { background:#EBF5FB;border-left:4px solid #2E75B6;padding:10px 16px;border-radius:0 8px 8px 0;font-size:12.5px;margin-bottom:1.25rem;line-height:1.6; }
-
-.nom-tabla-wrap { overflow-x:auto;margin-bottom:1.25rem; }
-.nom-tabla { width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px; }
-.nom-tabla thead th { background:#1F3864;color:#fff;padding:8px 10px;white-space:nowrap;font-weight:500; }
-.nom-tabla thead th.right { text-align:right; }
-.nom-tabla thead th.center { text-align:center; }
-.nom-tabla tbody tr:nth-child(even) td { background:#F8FAFC; }
-.nom-tabla tbody tr:hover td { background:#EBF5FB; }
-.nom-tabla td { padding:7px 10px;border-bottom:1px solid #eee;vertical-align:middle; }
-.nom-tabla td.right { text-align:right;font-variant-numeric:tabular-nums; }
-.nom-tabla td.center { text-align:center; }
-.nom-tabla tfoot td { background:#E8EAF6;font-weight:700;padding:8px 10px;border-top:2px solid #1F3864; }
-.nom-tabla tfoot td.right { text-align:right; }
-
-.emp-nombre { font-weight:600;font-size:13px; }
-.emp-cargo { font-size:11px;color:var(--muted);margin-top:1px; }
-.val-descu { color:#C0392B; }
-.val-neto  { color:#1E8449;font-weight:700; }
-.val-costo { color:#C0392B; }
-
-.badge-gen { display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600; }
-.badge-gen.si { background:#D5E8D4;color:#1E5631; }
-.badge-gen.no { background:#F5F5F5;color:#888; }
-
-.aportes-card { background:var(--card-bg,#fff);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:1rem; }
-.aportes-card h3 { font-size:14px;font-weight:600;color:#1F3864;margin:0 0 1rem;border-bottom:1px solid #eee;padding-bottom:8px; }
-.aportes-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:10px; }
-.aporte-item { display:flex;justify-content:space-between;align-items:center;background:#f8f9fa;border-radius:6px;padding:8px 12px; }
-.aporte-concepto { font-size:12px;color:var(--muted); }
-.aporte-valor { font-size:13px;font-weight:700;color:#1F3864; }
-.aporte-valor.exonerado { color:#1E8449; }
-.aporte-valor.cero { color:#1E8449; }
-
-@media (max-width:900px) { .kpis{grid-template-columns:1fr 1fr;} .aportes-grid{grid-template-columns:1fr;} }
+.nom-wrap{max-width:100%;}
+.nom-hdr{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:1.25rem;}
+.nom-hdr h2{font-size:20px;font-weight:600;margin:0;}
+.nom-hdr p{font-size:12px;color:var(--muted);margin:4px 0 0;}
+.nom-ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.nom-ctrl select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem;}
+.kpi{background:var(--card-bg,#fff);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.kpi-lbl{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px;}
+.kpi-val{font-size:20px;font-weight:700;line-height:1;}
+.kpi-val.g{color:#1E8449;}.kpi-val.r{color:#C0392B;}.kpi-val.b{color:#1F3864;}
+.alerta{background:#EBF5FB;border-left:4px solid #2E75B6;padding:10px 16px;border-radius:0 8px 8px 0;font-size:12.5px;margin-bottom:1.25rem;line-height:1.6;}
+.nom-wrap2{overflow-x:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:1.25rem;}
+.nom-t{width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px;}
+.nom-t thead th{background:#1F3864;color:#fff;padding:9px 10px;white-space:nowrap;font-weight:500;}
+.nom-t thead th.r{text-align:right;}
+.nom-t tbody tr:nth-child(even) td{background:#F8FAFC;}
+.nom-t tbody tr:hover td{background:#EBF5FB;}
+.nom-t td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
+.nom-t td.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.nom-t td.c{text-align:center;}
+.nom-t tfoot td{background:#E8EAF6;font-weight:700;padding:8px 10px;border-top:2px solid #1F3864;white-space:nowrap;}
+.nom-t tfoot td.r{text-align:right;}
+.emp-n{font-weight:600;font-size:13px;}.emp-c{font-size:11px;color:var(--muted);}
+.vr{color:#C0392B;}.vg{color:#1E8449;font-weight:700;}
+.bdg{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;}
+.bdg-si{background:#D5E8D4;color:#1E5631;}.bdg-no{background:#F5F5F5;color:#888;}
+.ap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.ap-item{display:flex;justify-content:space-between;align-items:center;background:#f8f9fa;border-radius:6px;padding:8px 12px;}
+.ap-lbl{font-size:12px;color:var(--muted);}.ap-val{font-size:13px;font-weight:700;color:#1F3864;}
+.ap-val.ex{color:#1E8449;}
+@media(max-width:900px){.kpis{grid-template-columns:1fr 1fr;}.ap-grid{grid-template-columns:1fr;}}
 </style>
 
-<div class="nom-header">
-  <div class="nom-title">
+<div class="nom-hdr">
+  <div>
     <h2>Nómina — <%= MESES[mes-1] %> 2025</h2>
-    <p>Inversiones Uniatlantico S.A.S. &nbsp;·&nbsp; NIT 900.123.456-7 &nbsp;·&nbsp; SMMLV: $<%= SMMLV.toLocaleString('es-CO') %> &nbsp;·&nbsp; Aux. transporte: $<%= AUX.toLocaleString('es-CO') %></p>
+    <p>Inversiones Uniatlantico S.A.S. · NIT 900.123.456-7 · SMMLV: $<%= SMMLV.toLocaleString('es-CO') %> · Aux. transporte: $<%= AUX.toLocaleString('es-CO') %></p>
   </div>
-  <div class="nom-controls">
+  <div class="nom-ctrl">
     <select onchange="location.href='/nomina?mes='+this.value">
-      <% MESES.forEach((m,i) => { %>
+      <% MESES.forEach((m,i)=>{ %>
         <option value="<%= i+1 %>" <%= mes==i+1?'selected':'' %>><%= m %> 2025</option>
       <% }) %>
     </select>
     <form method="POST" action="/nomina/generar-documento/<%= mes %>" style="margin:0;">
-      <button type="submit" class="btn btn-primary" style="font-size:13px;padding:7px 14px;">
-        📄 Generar doc. soporte
-      </button>
+      <button type="submit" class="btn btn-primary" style="font-size:13px;padding:7px 14px;">📄 Generar doc. soporte</button>
     </form>
   </div>
 </div>
 
-<!-- KPIs -->
 <div class="kpis">
-  <div class="kpi">
-    <div class="kpi-label">Total neto a pagar</div>
-    <div class="kpi-val green"><%= fmt(totNeto) %></div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-label">Costo total empresa</div>
-    <div class="kpi-val red"><%= fmt(totCost) %></div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-label">Empleados activos</div>
-    <div class="kpi-val blue"><%= nomina.length %></div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-label">UVT 2025 · tope ret. 95 UVT</div>
-    <div class="kpi-val" style="font-size:15px;color:#555;">$<%= UVT.toLocaleString('es-CO') %> · $<%= (95*UVT).toLocaleString('es-CO') %></div>
-  </div>
+  <div class="kpi"><div class="kpi-lbl">Total neto a pagar</div><div class="kpi-val g"><%= fmt(totNeto) %></div></div>
+  <div class="kpi"><div class="kpi-lbl">Costo total empresa</div><div class="kpi-val r"><%= fmt(totCost) %></div></div>
+  <div class="kpi"><div class="kpi-lbl">Empleados activos</div><div class="kpi-val b"><%= nomina.length %></div></div>
+  <div class="kpi"><div class="kpi-lbl">UVT 2025 · Tope ret. 95 UVT</div><div class="kpi-val" style="font-size:14px;color:#555;">$<%= UVT.toLocaleString('es-CO') %> · $<%= (95*UVT).toLocaleString('es-CO') %></div></div>
 </div>
 
-<!-- Alerta Art. 114-1 -->
-<div class="alerta-box">
-  <strong>Art. 114-1 ET — Exoneración de aportes:</strong>
-  Inversiones Uniatlantico S.A.S. está <strong>exonerada</strong> de aportes patronales a EPS (8,5%), SENA (2%) e ICBF (3%) para empleados que devenguen menos de <strong>10 SMMLV ($<%= (10*SMMLV).toLocaleString('es-CO') %>)</strong>.
-  Solo paga pensión empleador (12%) y ARL según clase de riesgo.
-  &nbsp;·&nbsp; <strong>Res. 000013/2021 DIAN:</strong> nómina electrónica obligatoria como documento soporte de pago.
+<div class="alerta">
+  <strong>Art. 114-1 ET — Exoneración:</strong> La empresa está <strong>exonerada</strong> de EPS empleador (8,5%), SENA (2%) e ICBF (3%) para empleados que devenguen menos de 10 SMMLV ($<%= (10*SMMLV).toLocaleString('es-CO') %>). Solo paga pensión (12%) y ARL.
+  &nbsp;·&nbsp; <strong>Res. 000013/2021:</strong> nómina electrónica obligatoria como documento soporte.
 </div>
 
-<!-- Tabla nómina -->
-<div class="nom-tabla-wrap">
-<table class="nom-tabla">
+<div class="nom-wrap2">
+<table class="nom-t">
   <thead>
     <tr>
       <th>#</th>
       <th>Empleado / Cargo</th>
-      <th class="right">Salario básico</th>
-      <th class="right">Aux. transp.</th>
-      <th class="right">Devengado</th>
-      <th class="right">(-) Salud 4%</th>
-      <th class="right">(-) Pensión 4%</th>
-      <th class="right">(-) Ret. fuente</th>
-      <th class="right">Neto a pagar</th>
-      <th class="right">Costo empresa</th>
-      <th class="center">Doc. soporte</th>
+      <th class="r">Salario básico</th>
+      <th class="r">Aux. transp.</th>
+      <th class="r">Devengado</th>
+      <th class="r">(-) Salud 4%</th>
+      <th class="r">(-) Pensión 4%</th>
+      <th class="r">(-) Ret. fuente</th>
+      <th class="r">Neto a pagar</th>
+      <th class="r">Costo empresa</th>
+      <th class="c">Doc. soporte</th>
     </tr>
   </thead>
   <tbody>
-  <% nomina.forEach((n, i) => {
-    const sal  = parseInt(n.salario_basico)||0;
-    const aux  = parseInt(n.auxilio_transporte)||0;
-    const dev  = parseInt(n.total_devengado)||0;
-    const dsal = parseInt(n.descuento_salud)||0;
-    const dpen = parseInt(n.descuento_pension)||0;
-    const dret = parseInt(n.retencion_fuente)||0;
-    const neto = parseInt(n.neto_pagar)||0;
-    const cost = parseInt(n.costo_total_empleador)||0;
+  <% nomina.forEach((x,i)=>{
+    const sal  = n(x.salario_basico);
+    const aux  = n(x.auxilio_transporte);
+    const dev  = sal + aux;
+    const dsal = n(x.descuento_salud);
+    const dpen = n(x.descuento_pension);
+    const dret = n(x.retencion_fuente);
+    const neto = n(x.neto_pagar);
+    const penEmp = n(x.aporte_pension_empleador);
+    const salEmp = n(x.aporte_salud_empleador);
+    const arl    = n(x.aporte_arl);
+    const cost   = dev + penEmp + salEmp + arl;
   %>
   <tr>
     <td style="color:var(--muted);font-size:11px;"><%= i+1 %></td>
-    <td>
-      <div class="emp-nombre"><%= n.nombre %></div>
-      <div class="emp-cargo"><%= n.cargo %></div>
-    </td>
-    <td class="right">$<%= sal.toLocaleString('es-CO') %></td>
-    <td class="right"><%= aux > 0 ? '$'+aux.toLocaleString('es-CO') : '<span style="color:#ccc">—</span>' %></td>
-    <td class="right"><strong>$<%= dev.toLocaleString('es-CO') %></strong></td>
-    <td class="right val-descu">($<%= dsal.toLocaleString('es-CO') %>)</td>
-    <td class="right val-descu">($<%= dpen.toLocaleString('es-CO') %>)</td>
-    <td class="right val-descu"><%= dret > 0 ? '($'+dret.toLocaleString('es-CO')+')' : '<span style="color:#aaa">$0</span>' %></td>
-    <td class="right val-neto">$<%= neto.toLocaleString('es-CO') %></td>
-    <td class="right val-costo">$<%= cost.toLocaleString('es-CO') %></td>
-    <td class="center">
-      <span class="badge-gen <%= n.documento_soporte_generado ? 'si' : 'no' %>">
-        <%= n.documento_soporte_generado ? '✓ Generado' : 'Pendiente' %>
-      </span>
-    </td>
+    <td><div class="emp-n"><%= x.nombre %></div><div class="emp-c"><%= x.cargo %></div></td>
+    <td class="r">$<%= sal.toLocaleString('es-CO') %></td>
+    <td class="r"><% if(aux>0){ %>$<%= aux.toLocaleString('es-CO') %><% }else{ %><span style="color:#ccc">—</span><% } %></td>
+    <td class="r"><strong>$<%= dev.toLocaleString('es-CO') %></strong></td>
+    <td class="r vr">($<%= dsal.toLocaleString('es-CO') %>)</td>
+    <td class="r vr">($<%= dpen.toLocaleString('es-CO') %>)</td>
+    <td class="r vr"><% if(dret>0){ %>($<%= dret.toLocaleString('es-CO') %>)<% }else{ %><span style="color:#aaa">$0</span><% } %></td>
+    <td class="r vg">$<%= neto.toLocaleString('es-CO') %></td>
+    <td class="r" style="color:#C0392B;">$<%= cost.toLocaleString('es-CO') %></td>
+    <td class="c"><span class="bdg <%= x.documento_soporte_generado?'bdg-si':'bdg-no' %>"><%= x.documento_soporte_generado?'✓ Generado':'Pendiente' %></span></td>
   </tr>
   <% }) %>
   </tbody>
   <tfoot>
     <tr>
-      <td colspan="2" style="text-align:right;font-size:12px;letter-spacing:.04em;">TOTALES</td>
-      <td class="right">$<%= nomina.reduce((a,n)=>a+(parseInt(n.salario_basico)||0),0).toLocaleString('es-CO') %></td>
-      <td class="right">$<%= nomina.reduce((a,n)=>a+(parseInt(n.auxilio_transporte)||0),0).toLocaleString('es-CO') %></td>
-      <td class="right">$<%= totDev.toLocaleString('es-CO') %></td>
-      <td class="right val-descu">($<%= totSal.toLocaleString('es-CO') %>)</td>
-      <td class="right val-descu">($<%= totPen.toLocaleString('es-CO') %>)</td>
-      <td class="right val-descu">($<%= totRet.toLocaleString('es-CO') %>)</td>
-      <td class="right val-neto">$<%= totNeto.toLocaleString('es-CO') %></td>
-      <td class="right val-costo">$<%= totCost.toLocaleString('es-CO') %></td>
+      <td colspan="2" style="text-align:right;font-size:12px;">TOTALES</td>
+      <td class="r">$<%= nomina.reduce((a,x)=>a+n(x.salario_basico),0).toLocaleString('es-CO') %></td>
+      <td class="r">$<%= nomina.reduce((a,x)=>a+n(x.auxilio_transporte),0).toLocaleString('es-CO') %></td>
+      <td class="r">$<%= totDev.toLocaleString('es-CO') %></td>
+      <td class="r vr">($<%= totSal.toLocaleString('es-CO') %>)</td>
+      <td class="r vr">($<%= totPen.toLocaleString('es-CO') %>)</td>
+      <td class="r vr">($<%= totRet.toLocaleString('es-CO') %>)</td>
+      <td class="r vg">$<%= totNeto.toLocaleString('es-CO') %></td>
+      <td class="r" style="color:#C0392B;">$<%= totCost.toLocaleString('es-CO') %></td>
       <td></td>
     </tr>
   </tfoot>
@@ -195,33 +143,15 @@ const totArl    = nomina.reduce((a,n)=>a+(parseInt(n.aporte_arl)||0),0);
 </div>
 
 <!-- Aportes empleador -->
-<div class="aportes-card">
-  <h3>Aportes empleador — Res. 000013/2021 · Nómina electrónica</h3>
-  <div class="aportes-grid">
-    <div class="aporte-item">
-      <span class="aporte-concepto">Pensión empleador (12%)</span>
-      <span class="aporte-valor">$<%= totPenEmp.toLocaleString('es-CO') %></span>
-    </div>
-    <div class="aporte-item">
-      <span class="aporte-concepto">Salud empleador (8,5%) — solo &gt; 10 SMMLV</span>
-      <span class="aporte-valor <%= totSalEmp===0?'cero':'' %>">$<%= totSalEmp.toLocaleString('es-CO') %></span>
-    </div>
-    <div class="aporte-item">
-      <span class="aporte-concepto">ARL (clase I: 0,522% · clase II: 1,044%)</span>
-      <span class="aporte-valor">$<%= totArl.toLocaleString('es-CO') %></span>
-    </div>
-    <div class="aporte-item">
-      <span class="aporte-concepto">SENA (2%) — <strong>exonerado</strong> Art. 114-1 ET</span>
-      <span class="aporte-valor exonerado">$0 ✓</span>
-    </div>
-    <div class="aporte-item">
-      <span class="aporte-concepto">ICBF (3%) — <strong>exonerado</strong> Art. 114-1 ET</span>
-      <span class="aporte-valor exonerado">$0 ✓</span>
-    </div>
-    <div class="aporte-item">
-      <span class="aporte-concepto">Caja compensación (4%) — <strong>exonerado</strong> Art. 114-1 ET</span>
-      <span class="aporte-valor exonerado">$0 ✓</span>
-    </div>
+<div style="background:var(--card-bg,#fff);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;">
+  <h3 style="font-size:14px;font-weight:600;color:#1F3864;margin:0 0 1rem;border-bottom:1px solid #eee;padding-bottom:8px;">Aportes empleador — Res. 000013/2021 · Nómina electrónica</h3>
+  <div class="ap-grid">
+    <div class="ap-item"><span class="ap-lbl">Pensión empleador (12%)</span><span class="ap-val">$<%= totPenEmp.toLocaleString('es-CO') %></span></div>
+    <div class="ap-item"><span class="ap-lbl">Salud empleador (8,5%) — solo > 10 SMMLV</span><span class="ap-val">$<%= totSalEmp.toLocaleString('es-CO') %></span></div>
+    <div class="ap-item"><span class="ap-lbl">ARL (0,522% clase I · 1,044% clase II)</span><span class="ap-val">$<%= totArl.toLocaleString('es-CO') %></span></div>
+    <div class="ap-item"><span class="ap-lbl">SENA (2%) — exonerado Art. 114-1 ET</span><span class="ap-val ex">$0 ✓</span></div>
+    <div class="ap-item"><span class="ap-lbl">ICBF (3%) — exonerado Art. 114-1 ET</span><span class="ap-val ex">$0 ✓</span></div>
+    <div class="ap-item"><span class="ap-lbl">Caja compensación (4%) — exonerado Art. 114-1 ET</span><span class="ap-val ex">$0 ✓</span></div>
   </div>
   <div style="margin-top:12px;padding-top:10px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:13px;">
     <span style="color:var(--muted)">Total aportes empleador del mes:</span>
