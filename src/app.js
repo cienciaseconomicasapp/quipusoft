@@ -7,7 +7,7 @@ const methodOverride = require('method-override');
 const morgan = require('morgan');
 const path = require('path');
 const pool = require('./config/database');
-const passport = require('./config/passport');
+const { passport } = require('./config/passport');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
