@@ -304,4 +304,109 @@ router.get('/balance-comprobacion', requireAuth, async (req, res) => {
   }
 });
 
+// ── GET /contabilidad/ajuste/:asientoId — formulario de ajuste ──────────────
+router.get('/ajuste/:asientoId', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  const { asientoId } = req.params;
+  try {
+    const { rows: [asiento] } = await pool.query(
+      `SELECT a.*, json_agg(
+         json_build_object('cuenta_codigo', ad.cuenta_codigo, 'nombre', pc.nombre,
+           'naturaleza', pc.naturaleza, 'debito', ad.debito, 'credito', ad.credito)
+         ORDER BY ad.id
+       ) AS detalles
+       FROM ${s}.asientos a
+       JOIN ${s}.asientos_detalle ad ON ad.asiento_id = a.id
+       JOIN ${s}.plan_cuentas pc ON pc.codigo = ad.cuenta_codigo
+       WHERE a.id = $1
+       GROUP BY a.id`, [asientoId]
+    );
+    if (!asiento) { req.flash('error', 'Asiento no encontrado'); return res.redirect('/contabilidad/libro-diario'); }
+
+    const { rows: cuentas } = await pool.query(
+      `SELECT codigo, nombre, naturaleza FROM ${s}.plan_cuentas ORDER BY codigo`
+    );
+
+    res.render('contabilidad/ajuste', {
+      title: `Asiento de ajuste — ${asiento.numero_comprobante}`,
+      user: req.user,
+      asientoOriginal: asiento,
+      cuentas,
+      error: req.flash('error'),
+      success: req.flash('success'),
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Error: ' + e.message);
+    res.redirect('/contabilidad/libro-diario');
+  }
+});
+
+// ── POST /contabilidad/ajuste/:asientoId — guardar asiento de ajuste ────────
+router.post('/ajuste/:asientoId', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  const { asientoId } = req.params;
+  const { concepto, justificacion, cuentas_codigo, descripciones, debitos, creditos } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Obtener info del asiento original
+    const { rows: [orig] } = await client.query(
+      `SELECT numero_comprobante, codigo_caso FROM ${s}.asientos WHERE id = $1`, [asientoId]
+    );
+
+    // Número del asiento corrector
+    const fecha = new Date().toISOString().split('T')[0];
+    const numAjuste = `AJ-${orig.numero_comprobante}`;
+
+    // Insertar asiento de ajuste
+    const { rows: [nuevo] } = await client.query(
+      `INSERT INTO ${s}.asientos
+        (fecha, numero_comprobante, tipo_comprobante, concepto, documento_soporte,
+         contraparte, estado, es_caso_atipico, codigo_caso, nota_pedagogica)
+       VALUES ($1,$2,$3,$4,$5,$6,'ajuste',true,$7,$8) RETURNING id`,
+      [fecha, numAjuste, 'Asiento de ajuste',
+       concepto || `Ajuste corrector de ${orig.numero_comprobante}`,
+       `REF:${orig.numero_comprobante}`,
+       'Ajuste estudiante',
+       orig.codigo_caso,
+       justificacion || null]
+    );
+
+    // Insertar líneas del asiento
+    const codigos  = Array.isArray(cuentas_codigo) ? cuentas_codigo  : [cuentas_codigo];
+    const descs    = Array.isArray(descripciones)  ? descripciones   : [descripciones];
+    const debs     = Array.isArray(debitos)        ? debitos         : [debitos];
+    const creds    = Array.isArray(creditos)       ? creditos        : [creditos];
+
+    for (let i = 0; i < codigos.length; i++) {
+      const deb = parseInt(debs[i] || 0);
+      const cre = parseInt(creds[i] || 0);
+      if (!codigos[i] || (deb === 0 && cre === 0)) continue;
+      await client.query(
+        `INSERT INTO ${s}.asientos_detalle (asiento_id, cuenta_codigo, descripcion, debito, credito)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [nuevo.id, codigos[i], descs[i] || '', deb, cre]
+      );
+    }
+
+    // Marcar asiento original como "corregido"
+    await client.query(
+      `UPDATE ${s}.asientos SET estado = 'corregido' WHERE id = $1`, [asientoId]
+    );
+
+    await client.query('COMMIT');
+    req.flash('success', `Asiento de ajuste ${numAjuste} registrado correctamente.`);
+    res.redirect('/contabilidad/libro-diario');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error(e);
+    req.flash('error', 'Error al registrar ajuste: ' + e.message);
+    res.redirect(`/contabilidad/ajuste/${asientoId}`);
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;

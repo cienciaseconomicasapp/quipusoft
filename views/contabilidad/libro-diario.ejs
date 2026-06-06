@@ -32,6 +32,11 @@
         <span class="fecha"><%= new Date(a.fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}) %></span>
         <span class="tipo-badge"><%= a.tipo_comprobante %></span>
         <% if(a.es_caso_atipico){ %><span class="atipico-badge">⚠ Caso <%= a.codigo_caso %></span><% } %>
+        <% if(a.estado === 'corregido'){ %><span class="corregido-badge">✅ Corregido</span><% } %>
+        <% if(a.estado === 'ajuste'){ %><span class="ajuste-badge">🔧 Asiento de ajuste</span><% } %>
+        <% if(a.es_caso_atipico && a.estado !== 'corregido' && a.estado !== 'ajuste'){ %>
+          <a href="/contabilidad/ajuste/<%= a.id %>" class="btn-ajuste">✏ Registrar ajuste</a>
+        <% } %>
       </div>
       <div class="asiento-concepto"><strong><%= a.concepto %></strong> — <span style="color:#666"><%= a.contraparte %></span></div>
       <% if(a.es_caso_atipico && a.nota_pedagogica){ %>
@@ -77,6 +82,10 @@
 .fecha { font-size:12px;color:#555; }
 .tipo-badge { font-size:11px;background:#EBF5FB;color:#1F3864;padding:2px 8px;border-radius:10px; }
 .atipico-badge { font-size:11px;background:#FDEBD0;color:#784212;padding:2px 8px;border-radius:10px;font-weight:600; }
+.corregido-badge { font-size:11px;background:#D5E8D4;color:#1E5631;padding:2px 8px;border-radius:10px;font-weight:600; }
+.ajuste-badge { font-size:11px;background:#EBF5FB;color:#1F3864;padding:2px 8px;border-radius:10px;font-weight:600; }
+.btn-ajuste { font-size:11px;background:#1F3864;color:white;padding:3px 10px;border-radius:10px;font-weight:600;text-decoration:none;margin-left:4px; }
+.btn-ajuste:hover { background:#2E75B6; }
 .asiento-concepto { font-size:13px; }
 .nota-pedagogica { margin-top:6px;font-size:12px;background:#FFF3CD;border-left:3px solid #F0AD4E;padding:4px 10px;border-radius:0 4px 4px 0;color:#7D4900; }
 .detalle-tabla { width:100%;border-collapse:collapse;font-size:13px; }

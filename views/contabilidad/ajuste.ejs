@@ -1,0 +1,161 @@
+<%- include('../partials/header') %>
+<style>
+.ajuste-wrap { max-width: 900px; margin: 0 auto; }
+.asiento-orig { background: #FFF3CD; border: 1px solid #F0AD4E; border-left: 5px solid #E67E22; border-radius: 8px; padding: 14px 18px; margin-bottom: 1.5rem; }
+.asiento-orig h4 { color: #7D4900; margin-bottom: 8px; font-size: 14px; }
+.orig-detalle { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+.orig-detalle th { background: #E67E22; color: white; padding: 5px 8px; }
+.orig-detalle td { padding: 4px 8px; border-bottom: 1px solid #f5deb3; }
+.form-ajuste { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 1.5rem; }
+.form-ajuste h3 { color: #1F3864; font-size: 16px; margin-bottom: 1rem; border-bottom: 2px solid #2E75B6; padding-bottom: 8px; }
+.campo { margin-bottom: 1rem; }
+.campo label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 4px; }
+.campo input, .campo textarea, .campo select { width: 100%; border: 1px solid #ccc; border-radius: 6px; padding: 7px 10px; font-size: 13px; font-family: Arial, sans-serif; }
+.campo textarea { resize: vertical; min-height: 70px; }
+.lineas-titulo { display: grid; grid-template-columns: 160px 1fr 120px 120px 36px; gap: 6px; font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; padding: 0 4px; }
+.linea-fila { display: grid; grid-template-columns: 160px 1fr 120px 120px 36px; gap: 6px; margin-bottom: 6px; align-items: center; }
+.linea-fila select, .linea-fila input { border: 1px solid #ccc; border-radius: 5px; padding: 5px 7px; font-size: 12px; width: 100%; }
+.linea-fila input[type=number] { text-align: right; }
+.btn-add-linea { background: #EBF5FB; border: 1px dashed #2E75B6; color: #1F3864; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; margin-top: 4px; }
+.btn-add-linea:hover { background: #D6EAF8; }
+.totales-ajuste { display: flex; gap: 20px; background: #EBF5FB; border-radius: 6px; padding: 8px 14px; margin-top: 8px; font-size: 13px; font-weight: 600; }
+.totales-ajuste .eq { color: #1E5631; }
+.totales-ajuste .neq { color: #C0392B; }
+.info-box { background: #D5E8D4; border-left: 4px solid #1E5631; padding: 8px 14px; border-radius: 4px; font-size: 12px; color: #1E5631; margin-bottom: 1rem; }
+.btn-guardar { background: #1F3864; color: white; border: none; padding: 10px 28px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 1rem; }
+.btn-guardar:hover { background: #2E75B6; }
+.btn-cancelar { color: #555; font-size: 13px; margin-left: 16px; text-decoration: none; }
+</style>
+
+<div class="ajuste-wrap">
+  <div class="page-header">
+    <div>
+      <h2>Registrar asiento de ajuste</h2>
+      <p>Caso atípico <%= asientoOriginal.codigo_caso %> — <%= asientoOriginal.numero_comprobante %></p>
+    </div>
+    <a href="/contabilidad/libro-diario" class="btn btn-secondary">← Volver al libro diario</a>
+  </div>
+
+  <!-- ASIENTO ORIGINAL (solo lectura) -->
+  <div class="asiento-orig">
+    <h4>⚠ Asiento original con error — <%= asientoOriginal.numero_comprobante %> — <%= new Date(asientoOriginal.fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'}) %></h4>
+    <div style="font-size:13px;margin-bottom:6px;"><strong>Concepto:</strong> <%= asientoOriginal.concepto %></div>
+    <% if(asientoOriginal.nota_pedagogica){ %>
+      <div style="font-size:12px;color:#7D4900;margin-bottom:8px;">📌 <%= asientoOriginal.nota_pedagogica %></div>
+    <% } %>
+    <table class="orig-detalle">
+      <thead><tr><th>Cuenta</th><th>Descripción</th><th style="text-align:right">Débito</th><th style="text-align:right">Crédito</th></tr></thead>
+      <tbody>
+      <% asientoOriginal.detalles.forEach(d => { %>
+        <tr>
+          <td><code><%= d.cuenta_codigo %></code> <%= d.nombre %></td>
+          <td><%= d.descripcion || '' %></td>
+          <td style="text-align:right;color:#7D4900"><%= d.debito > 0 ? '$'+Number(d.debito).toLocaleString('es-CO') : '' %></td>
+          <td style="text-align:right;color:#1E5631"><%= d.credito > 0 ? '$'+Number(d.credito).toLocaleString('es-CO') : '' %></td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FORMULARIO DE AJUSTE -->
+  <div class="form-ajuste">
+    <h3>Asiento corrector — AJ-<%= asientoOriginal.numero_comprobante %></h3>
+
+    <div class="info-box">
+      En contabilidad, los errores NO se borran. Se registra un asiento de ajuste que revierte o corrige el efecto del error original. El asiento original quedará marcado como "corregido" y el nuevo aparecerá en el libro diario con la etiqueta <strong>Ajuste</strong>.
+    </div>
+
+    <form method="POST" action="/contabilidad/ajuste/<%= asientoOriginal.id %>" id="formAjuste">
+
+      <div class="campo">
+        <label>Concepto del asiento de ajuste *</label>
+        <input type="text" name="concepto" required
+          placeholder="Ej: Corrección FV-REJ-25 — registro nota crédito por factura rechazada">
+      </div>
+
+      <div class="campo">
+        <label>Justificación técnica (por qué se hace este ajuste)</label>
+        <textarea name="justificacion"
+          placeholder="Explica el error detectado y la norma que fundamenta la corrección. Ej: Según Art. 771-2 ET, el gasto sin soporte no es deducible. Se revierte el registro del débito en 519595..."></textarea>
+      </div>
+
+      <div class="campo">
+        <label>Líneas del asiento corrector (partida doble)</label>
+        <div class="lineas-titulo">
+          <span>Cuenta</span><span>Descripción</span><span>Débito ($)</span><span>Crédito ($)</span><span></span>
+        </div>
+        <div id="lineas-container">
+          <% for(let i=0; i<4; i++){ %>
+          <div class="linea-fila" id="linea-<%= i %>">
+            <select name="cuentas_codigo[]">
+              <option value="">— Seleccionar —</option>
+              <% cuentas.forEach(c => { %>
+                <option value="<%= c.codigo %>"><%= c.codigo %> — <%= c.nombre %></option>
+              <% }) %>
+            </select>
+            <input type="text" name="descripciones[]" placeholder="Descripción">
+            <input type="number" name="debitos[]" placeholder="0" min="0" value="0" oninput="calcTotales()">
+            <input type="number" name="creditos[]" placeholder="0" min="0" value="0" oninput="calcTotales()">
+            <button type="button" onclick="quitarLinea(<%= i %>)" style="background:#FADBD8;border:1px solid #E74C3C;color:#C0392B;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;">✕</button>
+          </div>
+          <% } %>
+        </div>
+        <button type="button" class="btn-add-linea" onclick="agregarLinea()">+ Agregar línea</button>
+
+        <div class="totales-ajuste">
+          <span>Total débitos: <strong id="tot-deb">$0</strong></span>
+          <span>Total créditos: <strong id="tot-cred">$0</strong></span>
+          <span id="eq-msg" class="neq">⚠ Partida doble no cuadra</span>
+        </div>
+      </div>
+
+      <div>
+        <button type="submit" class="btn-guardar" id="btn-submit" disabled>💾 Registrar asiento de ajuste</button>
+        <a href="/contabilidad/libro-diario" class="btn-cancelar">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const cuentasOptions = `<option value="">— Seleccionar —</option>` +
+  [<% cuentas.forEach((c,i) => { %>`<option value="<%= c.codigo %>"><%= c.codigo %> — <%= c.nombre %></option>`<%= i<cuentas.length-1?',':'' %><% }) %>].join('');
+
+let lineaIdx = 4;
+
+function agregarLinea() {
+  const div = document.createElement('div');
+  div.className = 'linea-fila';
+  div.id = 'linea-' + lineaIdx;
+  div.innerHTML = `
+    <select name="cuentas_codigo[]">${cuentasOptions}</select>
+    <input type="text" name="descripciones[]" placeholder="Descripción">
+    <input type="number" name="debitos[]" placeholder="0" min="0" value="0" oninput="calcTotales()">
+    <input type="number" name="creditos[]" placeholder="0" min="0" value="0" oninput="calcTotales()">
+    <button type="button" onclick="quitarLinea(${lineaIdx})" style="background:#FADBD8;border:1px solid #E74C3C;color:#C0392B;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;">✕</button>`;
+  document.getElementById('lineas-container').appendChild(div);
+  lineaIdx++;
+}
+
+function quitarLinea(idx) {
+  const el = document.getElementById('linea-' + idx);
+  if (el) { el.remove(); calcTotales(); }
+}
+
+function calcTotales() {
+  const debs  = [...document.querySelectorAll('input[name="debitos[]"]')].reduce((a,e)=>a+(parseInt(e.value)||0),0);
+  const creds = [...document.querySelectorAll('input[name="creditos[]"]')].reduce((a,e)=>a+(parseInt(e.value)||0),0);
+  const fmt = v => '$' + v.toLocaleString('es-CO');
+  document.getElementById('tot-deb').textContent = fmt(debs);
+  document.getElementById('tot-cred').textContent = fmt(creds);
+  const eq = debs > 0 && debs === creds;
+  const msg = document.getElementById('eq-msg');
+  msg.textContent = eq ? '✅ Partida doble cuadra' : '⚠ Partida doble no cuadra';
+  msg.className = eq ? 'eq' : 'neq';
+  document.getElementById('btn-submit').disabled = !eq;
+}
+
+calcTotales();
+</script>
+<%- include('../partials/footer') %>
