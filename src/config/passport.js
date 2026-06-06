@@ -99,4 +99,4 @@ async function crearSchemaEstudiante(userId) {
   }
 }
 
-module.exports = passport;
+module.exports = { passport };
