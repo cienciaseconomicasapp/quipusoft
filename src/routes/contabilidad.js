@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
+const { crearSchemaContable } = require('../config/schema_contable');
 
 function requireAuth(req, res, next) {
   if (req.isAuthenticated()) return next();
@@ -8,6 +9,16 @@ function requireAuth(req, res, next) {
 }
 
 const schema = (id) => `u${id}`;
+
+// ── GET /contabilidad/init — inicializar schema contable manualmente ────────
+router.get('/init', requireAuth, async (req, res) => {
+  try {
+    await crearSchemaContable(req.user.id);
+    res.json({ ok: true, mensaje: `Schema contable creado para usuario ${req.user.id}` });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
 
 // ── GET /contabilidad — índice de libros ────────────────────────────────────
 router.get('/', requireAuth, (req, res) => {
