@@ -35,6 +35,13 @@ async (accessToken, refreshToken, profile, done) => {
         [profile.displayName, profile.photos[0]?.value, rol, profile.id]
       );
       const updated = await pool.query('SELECT * FROM usuarios WHERE google_id = $1', [profile.id]);
+      // Crear tablas contables si no existen aún
+      try {
+        const { crearSchemaContable } = require('./schema_contable');
+        await crearSchemaContable(updated.rows[0].id);
+      } catch (err) {
+        console.error('Error schema contable usuario existente:', err.message);
+      }
       return done(null, updated.rows[0]);
     }
 
