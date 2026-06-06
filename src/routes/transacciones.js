@@ -148,3 +148,78 @@ router.get('/exportar/mokanatax', requireAuth, setSchema, async (req, res) => {
 });
 
 module.exports = router;
+
+// ── GET /transacciones/:id/ajuste — formulario de ajuste desde transacción ──
+router.get('/:id/ajuste', requireAuth, setSchema, async (req, res) => {
+  const schema = req.schema;
+  const { rows: [tx] } = await pool.query(
+    `SELECT * FROM "${schema}".transacciones WHERE id = $1`, [req.params.id]
+  );
+  if (!tx || !tx.es_caso_atipico) return res.redirect('/transacciones');
+
+  // Ver si ya tiene ajuste registrado
+  const { rows: ajusteExistente } = await pool.query(
+    `SELECT * FROM "${schema}".transacciones
+     WHERE documento = $1 AND estado = 'ajuste'`,
+    ['AJ-' + tx.documento]
+  );
+
+  res.render('transacciones/ajuste', {
+    title: `Ajuste corrector — ${tx.documento}`,
+    user: req.user,
+    tx,
+    ajusteExistente: ajusteExistente[0] || null,
+    error: req.flash('error'),
+    success: req.flash('success'),
+  });
+});
+
+// ── POST /transacciones/:id/ajuste — guardar ajuste ─────────────────────────
+router.post('/:id/ajuste', requireAuth, setSchema, async (req, res) => {
+  const schema = req.schema;
+  const { concepto, justificacion, subtotal, iva, retencion, tipo_iva } = req.body;
+  const client = await pool.connect();
+  try {
+    const { rows: [tx] } = await client.query(
+      `SELECT * FROM "${schema}".transacciones WHERE id = $1`, [req.params.id]
+    );
+    if (!tx) throw new Error('Transacción no encontrada');
+
+    await client.query('BEGIN');
+
+    const sub = parseInt(subtotal) || 0;
+    const ivaV = parseInt(iva) || 0;
+    const ret = parseInt(retencion) || 0;
+    const total = sub + ivaV + ret;
+    const fecha = new Date().toISOString().split('T')[0];
+    const docAjuste = 'AJ-' + tx.documento;
+
+    await client.query(`
+      INSERT INTO "${schema}".transacciones
+        (documento, fecha, tipo, contraparte_codigo, contraparte_nombre,
+         concepto, subtotal, iva, retencion, total, mes, anno,
+         tipo_iva, estado, es_caso_atipico, codigo_caso, notas_pedagogicas, editable)
+      VALUES ($1,$2,'Asiento de ajuste',$3,$4,$5,$6,$7,$8,$9,$10,2025,$11,'ajuste',TRUE,$12,$13,FALSE)
+      ON CONFLICT DO NOTHING
+    `, [docAjuste, fecha, tx.contraparte_codigo, tx.contraparte_nombre,
+        concepto, sub, ivaV, ret, total, tx.mes,
+        tipo_iva || tx.tipo_iva, tx.codigo_caso,
+        `Ajuste corrector de ${tx.documento}: ${justificacion || ''}`]);
+
+    // Marcar la transacción original como corregida
+    await client.query(
+      `UPDATE "${schema}".transacciones SET estado = 'corregido' WHERE id = $1`,
+      [tx.id]
+    );
+
+    await client.query('COMMIT');
+    req.flash('success', `Ajuste ${docAjuste} registrado correctamente.`);
+    res.redirect('/transacciones');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    req.flash('error', 'Error: ' + e.message);
+    res.redirect(`/transacciones/${req.params.id}/ajuste`);
+  } finally {
+    client.release();
+  }
+});

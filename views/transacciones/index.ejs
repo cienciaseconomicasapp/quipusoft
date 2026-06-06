@@ -195,13 +195,12 @@
       </span>
     </td>
     <td class="c">
-      <% if(esAtipico && t.estado !== 'anulado'){ %>
-        <%
-          // Buscar si hay asiento contable relacionado para el ajuste
-          // La acción apunta al libro diario para que corrijan desde allí
-        %>
-        <a href="/contabilidad/libro-diario?desde=<%= new Date(t.fecha).toISOString().split('T')[0] %>&hasta=<%= new Date(t.fecha).toISOString().split('T')[0] %>"
-           class="btn-ajuste-tx">Ver en libro</a>
+      <% if(esAtipico && t.estado === 'corregido'){ %>
+        <span class="texto-corregido">✅ Corregido</span>
+      <% } else if(esAtipico && t.estado === 'ajuste'){ %>
+        <span style="font-size:10px;color:#1F3864;font-weight:600;">🔧 Ajuste</span>
+      <% } else if(esAtipico){ %>
+        <a href="/transacciones/<%= t.id %>/ajuste" class="btn-ajuste-tx">✏ Ajustar</a>
       <% } else if(t.editable){ %>
         <a href="/transacciones/<%= t.id %>/editar" style="font-size:11px;color:var(--muted);">✏ Editar</a>
       <% } %>
@@ -223,8 +222,7 @@
 </div>
 
 <div style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;gap:20px;flex-wrap:wrap;">
-  <span>🟠 Transacciones con borde naranja = casos atípicos pedagógicos</span>
-  <span>Para registrar ajustes contables ve a <a href="/contabilidad/libro-diario" style="color:#1F3864;font-weight:600;">Libros contables → Libro diario</a> y busca el asiento marcado con ⚠</span>
+  <span>🟠 Borde naranja = caso atípico pedagógico · Haz clic en <strong>✏ Ajustar</strong> para registrar el asiento corrector</span>
 </div>
 
 <%- include('../partials/footer') %>

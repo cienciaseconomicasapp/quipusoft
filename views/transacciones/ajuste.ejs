@@ -1,0 +1,157 @@
+<%- include('../partials/header', {title: title}) %>
+<style>
+.aj-wrap{max-width:860px;margin:0 auto;}
+.tx-orig{background:#FFF3CD;border:1px solid #F0AD4E;border-left:5px solid #E67E22;border-radius:8px;padding:14px 18px;margin-bottom:1.5rem;}
+.tx-orig h4{color:#7D4900;margin:0 0 10px;font-size:14px;}
+.tx-orig-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:12px;}
+.tx-orig-item label{display:block;color:#888;font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
+.tx-orig-item strong{color:#333;font-size:13px;}
+.nota-ped{background:#FEF9E7;border-left:3px solid #F39C12;padding:8px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#7D4900;margin-top:10px;}
+.form-card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:1.5rem;}
+.form-card h3{font-size:15px;font-weight:600;color:#1F3864;margin:0 0 1rem;border-bottom:2px solid #2E75B6;padding-bottom:8px;}
+.info-verde{background:#D5E8D4;border-left:4px solid #1E8449;padding:8px 14px;border-radius:0 6px 6px 0;font-size:12px;color:#1E5631;margin-bottom:1.25rem;}
+.campo{margin-bottom:1rem;}
+.campo label{display:block;font-size:12px;font-weight:600;color:#444;margin-bottom:4px;}
+.campo input,.campo textarea,.campo select{width:100%;border:1px solid #ccc;border-radius:6px;padding:7px 10px;font-size:13px;font-family:Arial,sans-serif;box-sizing:border-box;}
+.campo textarea{min-height:80px;resize:vertical;}
+.campos-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;}
+.total-line{display:flex;justify-content:space-between;align-items:center;background:#EBF5FB;border-radius:6px;padding:10px 14px;margin-top:8px;font-size:14px;}
+.total-line strong{font-size:18px;color:#1F3864;}
+.btn-reg{background:#1F3864;color:#fff;border:none;padding:10px 28px;font-size:14px;font-weight:bold;border-radius:6px;cursor:pointer;margin-top:1rem;}
+.btn-reg:hover{background:#2E75B6;}
+.ya-corregido{background:#D5E8D4;border:1px solid #1E8449;border-radius:8px;padding:14px 18px;}
+.ya-corregido h4{color:#1E5631;margin:0 0 8px;}
+</style>
+
+<div class="aj-wrap">
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
+    <div>
+      <h2>Registrar ajuste corrector</h2>
+      <p>Caso atípico <%= tx.codigo_caso %> — Documento: <%= tx.documento %></p>
+    </div>
+    <a href="/transacciones" class="btn btn-secondary">← Volver</a>
+  </div>
+
+  <!-- TRANSACCIÓN ORIGINAL -->
+  <div class="tx-orig">
+    <h4>⚠ Transacción original con error — <%= tx.documento %></h4>
+    <div class="tx-orig-grid">
+      <div class="tx-orig-item"><label>Fecha</label><strong><%= new Date(tx.fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'}) %></strong></div>
+      <div class="tx-orig-item"><label>Tipo</label><strong><%= tx.tipo %></strong></div>
+      <div class="tx-orig-item"><label>Contraparte</label><strong><%= tx.contraparte_nombre %></strong></div>
+      <div class="tx-orig-item"><label>Estado actual</label><strong><%= tx.estado %></strong></div>
+      <div class="tx-orig-item"><label>Subtotal</label><strong>$<%= Number(tx.subtotal).toLocaleString('es-CO') %></strong></div>
+      <div class="tx-orig-item"><label>IVA</label><strong>$<%= Number(tx.iva).toLocaleString('es-CO') %></strong></div>
+      <div class="tx-orig-item"><label>Retención</label><strong>$<%= Number(tx.retencion).toLocaleString('es-CO') %></strong></div>
+      <div class="tx-orig-item"><label>Total</label><strong>$<%= Number(tx.total).toLocaleString('es-CO') %></strong></div>
+    </div>
+    <% if(tx.notas_pedagogicas){ %>
+      <div class="nota-ped">📌 <strong>Hallazgo pedagógico:</strong> <%= tx.notas_pedagogicas %></div>
+    <% } %>
+    <div style="margin-top:8px;font-size:12px;color:#888;">Concepto: <%= tx.concepto %></div>
+  </div>
+
+  <!-- SI YA FUE CORREGIDA -->
+  <% if(ajusteExistente){ %>
+  <div class="ya-corregido">
+    <h4>✅ Esta transacción ya tiene un ajuste registrado</h4>
+    <div style="font-size:13px;">
+      <strong>Documento:</strong> <%= ajusteExistente.documento %> &nbsp;·&nbsp;
+      <strong>Concepto:</strong> <%= ajusteExistente.concepto %> &nbsp;·&nbsp;
+      <strong>Total ajuste:</strong> $<%= Number(ajusteExistente.total).toLocaleString('es-CO') %>
+    </div>
+    <% if(ajusteExistente.notas_pedagogicas){ %>
+      <div style="margin-top:6px;font-size:12px;color:#555;"><strong>Justificación:</strong> <%= ajusteExistente.notas_pedagogicas %></div>
+    <% } %>
+  </div>
+
+  <% } else { %>
+
+  <!-- FORMULARIO DE AJUSTE -->
+  <div class="form-card">
+    <h3>Asiento corrector — AJ-<%= tx.documento %></h3>
+
+    <div class="info-verde">
+      En contabilidad los errores <strong>no se borran</strong> — se registra un documento corrector que revierte o ajusta el efecto del error. La transacción original quedará marcada como <strong>corregida</strong> y el ajuste aparecerá en el libro de transacciones.
+    </div>
+
+    <form method="POST" action="/transacciones/<%= tx.id %>/ajuste" id="formAjuste">
+
+      <div class="campo">
+        <label>Concepto del ajuste *</label>
+        <input type="text" name="concepto" required
+          placeholder="Ej: Corrección <%= tx.documento %> — anulación factura rechazada / regularización IVA / amortización anticipo...">
+      </div>
+
+      <div class="campo">
+        <label>Justificación técnica — Base normativa del ajuste *</label>
+        <textarea name="justificacion" required
+          placeholder="Explica el error y la norma que sustenta la corrección. Ej: Según Art. 771-2 ET el gasto sin soporte no es deducible. Se revierte el cargo a 519595 por $3.500.000 mediante crédito a la misma cuenta..."></textarea>
+      </div>
+
+      <div class="campos-grid">
+        <div class="campo">
+          <label>Subtotal del ajuste ($)</label>
+          <input type="number" name="subtotal" id="sub" value="0" min="0" oninput="calcTotal()">
+        </div>
+        <div class="campo">
+          <label>IVA del ajuste ($)</label>
+          <input type="number" name="iva" id="iva" value="0" oninput="calcTotal()">
+          <div style="font-size:11px;color:#888;margin-top:3px;">Negativo si es reversión de IVA</div>
+        </div>
+        <div class="campo">
+          <label>Retención ($)</label>
+          <input type="number" name="retencion" id="ret" value="0" oninput="calcTotal()">
+        </div>
+        <div class="campo">
+          <label>Tipo IVA</label>
+          <select name="tipo_iva">
+            <option value="gravado">Gravado (19%)</option>
+            <option value="exento">Exento (0%)</option>
+            <option value="excluido">Excluido</option>
+            <option value="no_aplica">No aplica</option>
+            <option value="reversion">Reversión</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="total-line">
+        <span>Total del ajuste:</span>
+        <strong id="tot-display">$0</strong>
+      </div>
+
+      <!-- Guía rápida por caso -->
+      <% const guias = {
+        'A-01': 'FV-REJ: Registra una nota crédito que revierta los $11.900.000 de cartera (crédito 130505) y el IVA generado ($1.900.000). Subtotal: -10.000.000 / IVA: -1.900.000',
+        'A-02': 'CE-053: Registra la reversión del gasto sin soporte. Subtotal: -3.500.000. El gasto no es deducible (Art. 771-2 ET). Tipo IVA: no aplica.',
+        'A-03': 'CE-063/CE-072: Registra la amortización del anticipo. Subtotal: -6.000.000 (crédito a cuenta 133005 Anticipos). El pedido ya llegó — el anticipo debe quedar en $0.',
+        'A-04': 'FV-042: Registra el IVA faltante por $800.000 (diferencia exógena vs. declarado). IVA: 800.000. Tipo: gravado.',
+        'A-05': 'FC-019: Registra la retención omitida. Retención: -1.225.000 (3,5% de $35.000.000). Subtotal: 0.',
+        'A-06': 'FV-052: La venta de libros es EXCLUIDA, no exenta — no hay diferencia en IVA pero sí en la prorrata. Registra la reclasificación con justificación normativa.',
+      }; %>
+      <% if(guias[tx.codigo_caso]){ %>
+      <div style="background:#EBF5FB;border-left:4px solid #2E75B6;padding:8px 14px;border-radius:0 6px 6px 0;font-size:12px;margin-top:12px;color:#1F3864;">
+        <strong>💡 Guía para <%= tx.codigo_caso %>:</strong> <%= guias[tx.codigo_caso] %>
+      </div>
+      <% } %>
+
+      <div>
+        <button type="submit" class="btn-reg">💾 Registrar ajuste corrector</button>
+        <a href="/transacciones" style="color:#555;font-size:13px;margin-left:16px;">Cancelar</a>
+      </div>
+    </form>
+  </div>
+  <% } %>
+</div>
+
+<script>
+function calcTotal(){
+  const s = parseInt(document.getElementById('sub').value)||0;
+  const iv = parseInt(document.getElementById('iva').value)||0;
+  const r = parseInt(document.getElementById('ret').value)||0;
+  document.getElementById('tot-display').textContent =
+    '$' + (s+iv+r).toLocaleString('es-CO');
+}
+calcTotal();
+</script>
+<%- include('../partials/footer') %>
