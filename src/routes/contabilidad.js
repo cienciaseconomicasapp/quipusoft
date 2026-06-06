@@ -129,7 +129,7 @@ router.get('/libro-mayor', requireAuth, async (req, res) => {
     // Todas las cuentas con movimiento en el período
     let cuentasQuery = `
       SELECT DISTINCT
-        pc.codigo, pc.nombre, pc.naturaleza, pc.clase, pc.grupo,
+        pc.codigo, pc.nombre, pc.naturaleza, pc.tipo,
         pc.tipo
       FROM ${s}.plan_cuentas pc
       JOIN ${s}.asientos_detalle ad ON ad.cuenta_codigo = pc.codigo
@@ -268,7 +268,7 @@ router.get('/balance-comprobacion', requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT
-        pc.codigo, pc.nombre, pc.naturaleza, pc.clase, pc.grupo, pc.tipo,
+        pc.codigo, pc.nombre, pc.naturaleza, pc.tipo, pc.tipo,
         COALESCE(SUM(ad.debito), 0)  AS total_debito,
         COALESCE(SUM(ad.credito), 0) AS total_credito,
         CASE WHEN pc.naturaleza = 'D'
@@ -278,7 +278,7 @@ router.get('/balance-comprobacion', requireAuth, async (req, res) => {
       FROM ${s}.plan_cuentas pc
       LEFT JOIN ${s}.asientos_detalle ad ON ad.cuenta_codigo = pc.codigo
       LEFT JOIN ${s}.asientos a ON a.id = ad.asiento_id AND a.fecha <= $1
-      GROUP BY pc.codigo, pc.nombre, pc.naturaleza, pc.clase, pc.grupo, pc.tipo
+      GROUP BY pc.codigo, pc.nombre, pc.naturaleza, pc.tipo
       HAVING COALESCE(SUM(ad.debito),0) > 0 OR COALESCE(SUM(ad.credito),0) > 0
       ORDER BY pc.codigo
     `, [fechaHasta]);
