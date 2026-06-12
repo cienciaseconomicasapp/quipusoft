@@ -17,6 +17,47 @@
   </div>
 <% } %>
 
+<% if (user.rol === 'docente' || user.rol === 'admin') { %>
+  <div class="form-card">
+    <h3>🔄 Resetear evaluaciones de un estudiante</h3>
+    <p style="font-size:12px; color: var(--muted); margin-bottom: 1rem;">
+      Usa esta opción si un estudiante quedó con una calificación incorrecta por un error técnico (por ejemplo, respuestas mal registradas). Al resetear, se eliminan sus intentos de la semana seleccionada (o de todas) y el estudiante podrá volver a presentar la evaluación desde cero. Esta acción no se puede deshacer.
+    </p>
+    <form action="/evaluaciones/admin/resetear-intentos" method="POST" onsubmit="return confirm('¿Seguro que quieres eliminar los intentos seleccionados? Esta acción no se puede deshacer.');">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Estudiante</label>
+          <select name="usuario_id" required>
+            <option value="">Selecciona un estudiante...</option>
+            <% estudiantes.forEach(e => { %>
+              <option value="<%= e.id %>">
+                <%= e.nombre %> — <%= e.email %>
+                <% if (e.semanas_con_intentos && e.semanas_con_intentos.length) { %>
+                  (semanas con intentos: <%= e.semanas_con_intentos.join(', ') %>)
+                <% } else { %>
+                  (sin intentos registrados)
+                <% } %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Semana a resetear</label>
+          <select name="semana" required>
+            <option value="1">Semana 1</option>
+            <option value="2">Semana 2</option>
+            <option value="3">Semana 3</option>
+            <option value="4">Semana 4</option>
+            <option value="todas">Todas las semanas</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-danger" style="margin-top:1rem;">Resetear evaluación(es)</button>
+    </form>
+  </div>
+<% } %>
+
+
 <div class="quick-links">
   <h3>Filtrar por semana</h3>
   <div class="links-grid">
