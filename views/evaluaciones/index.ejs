@@ -1,0 +1,66 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <h2>📝 Evaluaciones semanales</h2>
+  <p>10 preguntas por semana. El puntaje combina aciertos y tiempo de respuesta: <%= 10 %> pts por respuesta correcta, menos <%= 0.1 %> pts por cada segundo que tardes (mínimo 2 pts si es correcta).</p>
+</div>
+
+<div class="quick-links">
+  <h3>Acciones</h3>
+  <div class="links-grid">
+    <a href="/evaluaciones/ranking" class="quick-link accent">🏆 Ver ranking</a>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Semana</th>
+        <th>Preguntas disponibles</th>
+        <th>Mejor puntaje</th>
+        <th>Aciertos</th>
+        <th>Estado</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% semanas.forEach(s => { %>
+        <% const mejor = mejoresPorSemana[s.semana]; %>
+        <tr>
+          <td><strong>Semana <%= s.semana %></strong></td>
+          <td class="text-center"><%= s.total_preguntas %></td>
+          <td class="text-center"><%= mejor ? parseFloat(mejor.puntaje_total).toFixed(2) + ' / 100' : '—' %></td>
+          <td class="text-center"><%= mejor ? `${mejor.correctas} / ${mejor.total_preguntas}` : '—' %></td>
+          <td>
+            <% if (mejor) { %>
+              <span class="badge badge-vigente">Completado</span>
+            <% } else { %>
+              <span class="badge badge-borrador">Pendiente</span>
+            <% } %>
+          </td>
+          <td>
+            <a href="/evaluaciones/semana/<%= s.semana %>" class="btn btn-primary">
+              <%= mejor ? 'Reintentar' : 'Iniciar test' %>
+            </a>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<% if (intentos.length) { %>
+<div class="alert-panel">
+  <h3>Historial de intentos</h3>
+  <% intentos.forEach(i => { %>
+    <div class="alert-item" style="background: var(--gray); color: var(--text);">
+      Semana <%= i.semana %> — Puntaje: <strong><%= parseFloat(i.puntaje_total).toFixed(2) %></strong>
+      (<%= i.correctas %>/<%= i.total_preguntas %> correctas, <%= i.tiempo_total_segundos %>s totales) —
+      <%= new Date(i.completado_en).toLocaleString('es-CO') %>
+    </div>
+  <% }) %>
+</div>
+<% } %>
+
+<%- include('../partials/footer') %>

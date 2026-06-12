@@ -67,6 +67,7 @@ app.use('/nomina', require('./routes/nomina'));
 app.use('/declaraciones', require('./routes/declaraciones'));
 app.use('/contabilidad', require('./routes/contabilidad'));
 app.use('/admin', require('./routes/admin'));
+app.use('/evaluaciones', require('./routes/evaluaciones'));
 
 // Ruta raíz
 app.get('/', (req, res) => {

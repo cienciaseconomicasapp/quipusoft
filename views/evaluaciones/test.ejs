@@ -1,0 +1,109 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <h2>📝 Evaluación — Semana <%= semana %></h2>
+  <p><%= preguntas.length %> preguntas. Cada respuesta correcta otorga <%= puntosPorCorrecta %> puntos, menos <%= penalizacionPorSegundo %> puntos por cada segundo de demora en esa pregunta (mínimo 2 pts si aciertas). El cronómetro de cada pregunta inicia cuando esta se muestra en pantalla.</p>
+</div>
+
+<div class="alert-panel" id="alerta-tiempo" style="display:none;">
+  <div class="alert-item warning">
+    ⏱ Llevas más de 2 minutos en esta pregunta. El puntaje de esta pregunta ya está en su mínimo si la respondes correctamente.
+  </div>
+</div>
+
+<form id="form-test" action="/evaluaciones/semana/<%= semana %>/enviar" method="POST">
+  <% preguntas.forEach((p, idx) => { %>
+    <div class="form-card pregunta-card" data-pregunta-id="<%= p.id %>" data-idx="<%= idx %>" style="<%= idx === 0 ? '' : 'display:none;' %>">
+      <h3>Pregunta <%= idx + 1 %> de <%= preguntas.length %></h3>
+      <p style="margin-bottom: 1rem; font-size: 14px;"><%= p.pregunta %></p>
+
+      <div class="form-group">
+        <label><input type="radio" name="respuestas[<%= p.id %>]" value="A" required> A) <%= p.opcion_a %></label>
+      </div>
+      <div class="form-group">
+        <label><input type="radio" name="respuestas[<%= p.id %>]" value="B"> B) <%= p.opcion_b %></label>
+      </div>
+      <div class="form-group">
+        <label><input type="radio" name="respuestas[<%= p.id %>]" value="C"> C) <%= p.opcion_c %></label>
+      </div>
+      <div class="form-group">
+        <label><input type="radio" name="respuestas[<%= p.id %>]" value="D"> D) <%= p.opcion_d %></label>
+      </div>
+
+      <input type="hidden" name="tiempos[<%= p.id %>]" class="tiempo-input" value="0">
+
+      <div style="margin-top: 1rem; display:flex; justify-content: space-between; align-items:center;">
+        <span style="font-size:12px; color: var(--muted);">⏱ Tiempo en esta pregunta: <span class="cronometro">0</span>s</span>
+        <% if (idx < preguntas.length - 1) { %>
+          <button type="button" class="btn btn-primary btn-siguiente">Siguiente →</button>
+        <% } else { %>
+          <button type="submit" class="btn btn-primary">Finalizar evaluación</button>
+        <% } %>
+      </div>
+    </div>
+  <% }) %>
+</form>
+
+<style>
+  label { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--border); border-radius:6px; margin-bottom:6px; cursor:pointer; font-size:13px; }
+  label:hover { background: var(--gray); }
+  input[type="radio"] { width:auto; }
+</style>
+
+<script>
+(function() {
+  const cards = document.querySelectorAll('.pregunta-card');
+  let current = 0;
+  let startTime = Date.now();
+  let intervalId = null;
+
+  function tick() {
+    const card = cards[current];
+    const seconds = Math.floor((Date.now() - startTime) / 1000);
+    card.querySelector('.cronometro').textContent = seconds;
+    card.querySelector('.tiempo-input').value = seconds;
+    if (seconds >= 120) {
+      document.getElementById('alerta-tiempo').style.display = 'block';
+    }
+  }
+
+  function startTimerForCurrent() {
+    startTime = Date.now();
+    document.getElementById('alerta-tiempo').style.display = 'none';
+    if (intervalId) clearInterval(intervalId);
+    intervalId = setInterval(tick, 1000);
+  }
+
+  startTimerForCurrent();
+
+  document.querySelectorAll('.btn-siguiente').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card = cards[current];
+      const seleccion = card.querySelector('input[type="radio"]:checked');
+      if (!seleccion) {
+        alert('Selecciona una respuesta antes de continuar.');
+        return;
+      }
+      // Congelar tiempo final de esta pregunta
+      const seconds = Math.floor((Date.now() - startTime) / 1000);
+      card.querySelector('.tiempo-input').value = seconds;
+
+      card.style.display = 'none';
+      current++;
+      cards[current].style.display = '';
+      startTimerForCurrent();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+
+  document.getElementById('form-test').addEventListener('submit', function(e) {
+    // Congelar tiempo de la última pregunta
+    const card = cards[current];
+    const seconds = Math.floor((Date.now() - startTime) / 1000);
+    card.querySelector('.tiempo-input').value = seconds;
+    if (intervalId) clearInterval(intervalId);
+  });
+})();
+</script>
+
+<%- include('../partials/footer') %>

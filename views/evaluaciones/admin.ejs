@@ -1,0 +1,109 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <h2>⚙️ Administrar evaluaciones</h2>
+  <p>Edita, activa/desactiva o crea preguntas para cada semana. Las preguntas inactivas no se muestran a los estudiantes.</p>
+</div>
+
+<div class="quick-links">
+  <h3>Semana</h3>
+  <div class="links-grid">
+    <% [1,2,3,4].forEach(s => { %>
+      <a href="/evaluaciones/admin?semana=<%= s %>" class="quick-link <%= semana===s ? 'accent' : '' %>">Semana <%= s %></a>
+    <% }) %>
+  </div>
+</div>
+
+<% preguntas.forEach(p => { %>
+  <div class="form-card">
+    <h3>Pregunta #<%= p.orden %> <% if(!p.activa){ %><span class="badge badge-borrador">Inactiva</span><% } else { %><span class="badge badge-vigente">Activa</span><% } %></h3>
+    <form action="/evaluaciones/admin/<%= p.id %>/editar" method="POST">
+      <input type="hidden" name="semana" value="<%= semana %>">
+      <div class="form-group">
+        <label>Pregunta</label>
+        <textarea name="pregunta" rows="2" required><%= p.pregunta %></textarea>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Opción A</label>
+          <input type="text" name="opcion_a" value="<%= p.opcion_a %>" required>
+        </div>
+        <div class="form-group">
+          <label>Opción B</label>
+          <input type="text" name="opcion_b" value="<%= p.opcion_b %>" required>
+        </div>
+        <div class="form-group">
+          <label>Opción C</label>
+          <input type="text" name="opcion_c" value="<%= p.opcion_c %>" required>
+        </div>
+        <div class="form-group">
+          <label>Opción D</label>
+          <input type="text" name="opcion_d" value="<%= p.opcion_d %>" required>
+        </div>
+        <div class="form-group">
+          <label>Respuesta correcta</label>
+          <select name="respuesta_correcta" required>
+            <% ['A','B','C','D'].forEach(letra => { %>
+              <option value="<%= letra %>" <%= p.respuesta_correcta===letra ? 'selected' : '' %>><%= letra %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:1rem; display:flex; gap:8px;">
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+      </div>
+    </form>
+
+    <form action="/evaluaciones/admin/<%= p.id %>/toggle" method="POST" style="display:inline;">
+      <input type="hidden" name="semana" value="<%= semana %>">
+      <button type="submit" class="btn btn-secondary" style="margin-top:8px;">
+        <%= p.activa ? 'Desactivar' : 'Activar' %>
+      </button>
+    </form>
+    <form action="/evaluaciones/admin/<%= p.id %>/eliminar" method="POST" style="display:inline;" onsubmit="return confirm('¿Eliminar esta pregunta permanentemente?');">
+      <input type="hidden" name="semana" value="<%= semana %>">
+      <button type="submit" class="btn btn-danger" style="margin-top:8px;">Eliminar</button>
+    </form>
+  </div>
+<% }) %>
+
+<div class="form-card">
+  <h3>➕ Agregar nueva pregunta — Semana <%= semana %></h3>
+  <form action="/evaluaciones/admin/nueva" method="POST">
+    <input type="hidden" name="semana" value="<%= semana %>">
+    <div class="form-group">
+      <label>Pregunta</label>
+      <textarea name="pregunta" rows="2" required placeholder="Escribe la pregunta..."></textarea>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Opción A</label>
+        <input type="text" name="opcion_a" required>
+      </div>
+      <div class="form-group">
+        <label>Opción B</label>
+        <input type="text" name="opcion_b" required>
+      </div>
+      <div class="form-group">
+        <label>Opción C</label>
+        <input type="text" name="opcion_c" required>
+      </div>
+      <div class="form-group">
+        <label>Opción D</label>
+        <input type="text" name="opcion_d" required>
+      </div>
+      <div class="form-group">
+        <label>Respuesta correcta</label>
+        <select name="respuesta_correcta" required>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary" style="margin-top:1rem;">Crear pregunta</button>
+  </form>
+</div>
+
+<%- include('../partials/footer') %>

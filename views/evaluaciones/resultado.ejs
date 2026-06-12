@@ -1,0 +1,67 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <h2>✅ Resultado — Semana <%= intento.semana %></h2>
+  <% if (user.rol !== 'estudiante') { %>
+    <p>Estudiante: <strong><%= intento.nombre %></strong></p>
+  <% } %>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Puntaje obtenido</span>
+    <span class="stat-value blue"><%= parseFloat(intento.puntaje_total).toFixed(2) %> / 100</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Respuestas correctas</span>
+    <span class="stat-value green"><%= intento.correctas %> / <%= intento.total_preguntas %></span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Tiempo total</span>
+    <span class="stat-value"><%= intento.tiempo_total_segundos %> s</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Posición en el ranking — Semana <%= intento.semana %></span>
+    <span class="stat-value <%= posicion === 1 ? 'green' : 'blue' %>">
+      <%= posicion %>º de <%= totalParticipantes %>
+    </span>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Pregunta</th>
+        <th>Tu respuesta</th>
+        <th>Correcta</th>
+        <th>Tiempo</th>
+        <th>Puntaje</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% respuestas.forEach((r, idx) => { %>
+        <tr>
+          <td><%= idx + 1 %></td>
+          <td style="max-width:380px;"><%= r.pregunta %></td>
+          <td class="text-center">
+            <span class="badge <%= r.es_correcta ? 'badge-vigente' : 'badge-rechazada' %>">
+              <%= r.respuesta_seleccionada || '—' %>
+            </span>
+          </td>
+          <td class="text-center"><%= r.respuesta_correcta %></td>
+          <td class="text-center"><%= r.tiempo_segundos %>s</td>
+          <td class="text-center"><%= parseFloat(r.puntaje).toFixed(2) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<div class="links-grid">
+  <a href="/evaluaciones" class="quick-link">← Volver a evaluaciones</a>
+  <a href="/evaluaciones/ranking" class="quick-link accent">🏆 Ver ranking completo</a>
+</div>
+
+<%- include('../partials/footer') %>

@@ -384,4 +384,15 @@ async function initDB() {
   }
 }
 
-initDB().catch(console.error);
+initDB()
+  .then(async () => {
+    // Crear tablas del módulo de evaluaciones (pool ya cerrado arriba, usar uno nuevo)
+    const { crearTablasEvaluaciones } = require('./evaluaciones');
+    const pool2 = require('./database');
+    try {
+      await crearTablasEvaluaciones();
+    } finally {
+      await pool2.end();
+    }
+  })
+  .catch(console.error);
