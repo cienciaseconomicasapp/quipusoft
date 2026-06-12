@@ -82,6 +82,36 @@ router.post('/generar-documento/:mes', requireAuth, setSchema, async (req, res) 
   }
 });
 
+// ── GET /nomina/documento/:empleadoId/:mes — XML/CUNE Nómina Electrónica ────
+router.get('/documento/:empleadoId/:mes', requireAuth, setSchema, async (req, res) => {
+  const schema = req.schema;
+  const mes = parseInt(req.params.mes);
+  const empleadoId = parseInt(req.params.empleadoId);
+  try {
+    const { rows: [emp] } = await pool.query(
+      `SELECT * FROM "${schema}".empleados WHERE id = $1`, [empleadoId]
+    );
+    if (!emp) return res.redirect('/nomina?mes=' + mes);
+
+    const { rows: nomRows } = await pool.query(
+      `SELECT * FROM "${schema}".nomina WHERE empleado_id=$1 AND mes=$2 AND anno=2025`,
+      [empleadoId, mes]
+    );
+    const n = nomRows[0] || calcularNomina(emp, mes);
+
+    res.render('nomina/documento', {
+      title: `Nómina electrónica — ${emp.nombre} — ${nombreMes(mes)} 2025`,
+      user: req.user,
+      emp, n, mes,
+      mesNombre: nombreMes(mes),
+      generado: !!(nomRows[0] && nomRows[0].documento_soporte_generado),
+    });
+  } catch (err) {
+    console.error(err);
+    res.render('error', { mensaje: 'Error generando documento de nómina electrónica.', user: req.user });
+  }
+});
+
 function calcularNomina(emp, mes) {
   const salario = emp.salario_basico;
   const aux = salario <= (2 * SMMLV_2025) ? emp.auxilio_transporte : 0;

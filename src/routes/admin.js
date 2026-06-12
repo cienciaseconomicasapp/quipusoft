@@ -41,7 +41,7 @@ router.get('/estudiante/:id', requireDocente, async (req, res) => {
     const [usuario, transacciones, nomina, progreso] = await Promise.all([
       pool.query('SELECT * FROM usuarios WHERE id = $1', [req.params.id]),
       pool.query(`SELECT COUNT(*) AS total, COUNT(CASE WHEN es_caso_atipico THEN 1 END) AS atipicos FROM "${schema}".transacciones`),
-      pool.query(`SELECT COUNT(*) AS meses_generados FROM "${schema}".nomina WHERE documento_soporte_generado = TRUE`),
+      pool.query(`SELECT COUNT(DISTINCT mes) AS meses_generados FROM "${schema}".nomina WHERE documento_soporte_generado = TRUE AND anno = 2025`),
       pool.query(`SELECT * FROM progreso_estudiantes WHERE usuario_id = $1 ORDER BY semana, actividad`, [req.params.id]),
     ]);
 

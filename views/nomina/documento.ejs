@@ -1,0 +1,150 @@
+<%- include('../partials/header', {title: title}) %>
+<%
+const crypto = require('crypto');
+
+// Cédula sintética determinística a partir del número de empleado (10 dígitos)
+const cedula = '10' + String(1000000000 + emp.numero * 11111111).slice(-8);
+
+const fechaGen = `2025-${String(mes).padStart(2,'0')}-${mes===12?'26':'15'}`;
+const horaGen  = '06:00:00-05:00';
+const NIT_EMPLEADOR = '900123456';
+const periodoIni = `2025-${String(mes).padStart(2,'0')}-01`;
+const ultimoDia = new Date(2025, mes, 0).getDate();
+const periodoFin = `2025-${String(mes).padStart(2,'0')}-${ultimoDia}`;
+
+const devengado = Number(n.total_devengado || (n.salario_basico + (n.auxilio_transporte||0)));
+const deducciones = Number(n.total_deducciones || (n.descuento_salud + n.descuento_pension + n.retencion_fuente));
+const neto = Number(n.neto_pagar);
+
+const numNomina = `NE-${String(emp.numero).padStart(3,'0')}-2025-${String(mes).padStart(2,'0')}`;
+
+// CUNE — Código Único de Nómina Electrónica (SHA-384) — Anexo Técnico Nómina Electrónica Res. 000013/2021
+const clTec = 'fc8eac422eba16e22ffd8c6f94b3f40a4ce8c1ff';
+const cuneInput = `${numNomina}${fechaGen}${horaGen}${devengado.toFixed(2)}${deducciones.toFixed(2)}${neto.toFixed(2)}${NIT_EMPLEADOR}${cedula}${clTec}`;
+const cune = crypto.createHash('sha384').update(cuneInput).digest('hex');
+
+const xmlDoc = `<?xml version="1.0" encoding="UTF-8"?>
+<NominaIndividual xmlns="dian:gov:co:facturaelectronica:NominaIndividual">
+  <cbc:UBLVersionID>UBL 2.1</cbc:UBLVersionID>
+  <cbc:CustomizationID>NominaIndividual</cbc:CustomizationID>
+  <NumeroSecuenciaXML>${numNomina}</NumeroSecuenciaXML>
+  <cbc:IssueDate>${fechaGen}</cbc:IssueDate>
+  <cbc:IssueTime>${horaGen}</cbc:IssueTime>
+  <cbc:UUID schemeName="CUNE-SHA384">${cune}</cbc:UUID>
+  <PeriodoNomina>
+    <FechaIngreso>${periodoIni}</FechaIngreso>
+    <FechaLiquidacionInicio>${periodoIni}</FechaLiquidacionInicio>
+    <FechaLiquidacionFin>${periodoFin}</FechaLiquidacionFin>
+    <TiempoLaborado>${ultimoDia}</TiempoLaborado>
+  </PeriodoNomina>
+  <Empleador>
+    <NIT>${NIT_EMPLEADOR}</NIT>
+    <RazonSocial>INVERSIONES UNIATLANTICO S.A.S.</RazonSocial>
+  </Empleador>
+  <Trabajador>
+    <TipoDocumento>CC</TipoDocumento>
+    <NumeroDocumento>${cedula}</NumeroDocumento>
+    <RazonSocial>${emp.nombre}</RazonSocial>
+    <Cargo>${emp.cargo}</Cargo>
+    <TipoContrato>${emp.tipo_contrato || 'Indefinido'}</TipoContrato>
+    <SalarioBase currencyID="COP">${Number(emp.salario_basico).toFixed(2)}</SalarioBase>
+  </Trabajador>
+  <Devengados>
+    <Basico currencyID="COP">${Number(emp.salario_basico).toFixed(2)}</Basico>
+    <AuxilioTransporte currencyID="COP">${Number(emp.auxilio_transporte||0).toFixed(2)}</AuxilioTransporte>
+    <TotalDevengado currencyID="COP">${devengado.toFixed(2)}</TotalDevengado>
+  </Devengados>
+  <Deducciones>
+    <SaludEmpleado currencyID="COP">${Number(n.descuento_salud).toFixed(2)}</SaludEmpleado>
+    <PensionEmpleado currencyID="COP">${Number(n.descuento_pension).toFixed(2)}</PensionEmpleado>
+    <RetencionFuente currencyID="COP">${Number(n.retencion_fuente).toFixed(2)}</RetencionFuente>
+    <TotalDeducciones currencyID="COP">${deducciones.toFixed(2)}</TotalDeducciones>
+  </Deducciones>
+  <ComprobanteTotal>
+    <DevengadosTotal currencyID="COP">${devengado.toFixed(2)}</DevengadosTotal>
+    <DeduccionesTotal currencyID="COP">${deducciones.toFixed(2)}</DeduccionesTotal>
+    <ComprobanteTotal currencyID="COP">${neto.toFixed(2)}</ComprobanteTotal>
+  </ComprobanteTotal>
+</NominaIndividual>`;
+
+const qrData = `https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=${cune}`;
+%>
+
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
+  <div>
+    <h2>Nómina Electrónica — <%= emp.nombre %></h2>
+    <p><%= emp.cargo %> &nbsp;|&nbsp; <%= mesNombre %> 2025 &nbsp;|&nbsp; Doc. <%= numNomina %></p>
+  </div>
+  <a href="/nomina?mes=<%= mes %>" class="btn btn-secondary">← Volver a Nómina</a>
+</div>
+
+<% if(generado){ %>
+<div style="background:#D5E8D4;border-left:4px solid #1E8449;padding:10px 16px;border-radius:0 8px 8px 0;margin-bottom:1.25rem;font-size:13px;color:#1E5631;">
+  ✓ <strong>Estado DIAN: ACEPTADA</strong> — Documento soporte de nómina electrónica transmitido y validado (Res. 000013/2021).
+</div>
+<% } else { %>
+<div style="background:#FFF3CD;border-left:4px solid #F0AD4E;padding:10px 16px;border-radius:0 8px 8px 0;margin-bottom:1.25rem;font-size:13px;color:#7D4900;">
+  ⚠ <strong>Pendiente de generar</strong> — Este documento todavía no ha sido transmitido a la DIAN. Vuelve a <a href="/nomina?mes=<%= mes %>" style="color:#7D4900;font-weight:600;">Nómina</a> y haz clic en "📄 Generar doc. soporte" para <%= mesNombre %> 2025.
+</div>
+<% } %>
+
+<div class="form-card">
+  <h3>📄 Documento XML — Nómina Electrónica Individual (Res. 000013/2021)</h3>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+    Estructura simulada según Anexo Técnico de Nómina Electrónica vigente — DIAN. Generado con fines pedagógicos.
+  </p>
+
+  <div style="background:#1E5631;color:#fff;padding:10px 14px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;">
+    CUNE — Código Único de Nómina Electrónica (SHA-384, 96 caracteres)
+  </div>
+  <div style="background:#0d2818;color:#90EE90;padding:12px 14px;border-radius:0 0 6px 6px;font-family:monospace;font-size:11px;word-break:break-all;line-height:1.6;">
+    <%= cune %>
+  </div>
+
+  <div style="margin-top:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:12px;">
+    <div style="background:#F8FAFC;border:1px solid #eee;border-radius:6px;padding:8px 12px;">
+      <span style="color:var(--muted);">Número del documento</span><br><strong><%= numNomina %></strong>
+    </div>
+    <div style="background:#F8FAFC;border:1px solid #eee;border-radius:6px;padding:8px 12px;">
+      <span style="color:var(--muted);">Fecha y hora de generación</span><br><strong><%= fechaGen %> <%= horaGen %></strong>
+    </div>
+    <div style="background:#F8FAFC;border:1px solid #eee;border-radius:6px;padding:8px 12px;">
+      <span style="color:var(--muted);">NIT empleador</span><br><strong><%= NIT_EMPLEADOR %> — Inversiones Uniatlantico S.A.S.</strong>
+    </div>
+    <div style="background:#F8FAFC;border:1px solid #eee;border-radius:6px;padding:8px 12px;">
+      <span style="color:var(--muted);">Documento trabajador</span><br><strong>CC <%= cedula %> — <%= emp.nombre %></strong>
+    </div>
+    <div style="background:#F8FAFC;border:1px solid #eee;border-radius:6px;padding:8px 12px;">
+      <span style="color:var(--muted);">Período liquidado</span><br><strong><%= periodoIni %> a <%= periodoFin %></strong>
+    </div>
+    <div style="background:#F8FAFC;border:1px solid #eee;border-radius:6px;padding:8px 12px;">
+      <span style="color:var(--muted);">Comprobante total (neto)</span><br><strong>$<%= neto.toLocaleString('es-CO') %></strong>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;">
+    <div style="background:#EBF5FB;border:1px solid #BDD7EE;border-radius:6px;padding:8px 12px;text-align:center;">
+      <span style="color:var(--muted);display:block;">Total devengado</span>
+      <strong style="color:#1F3864;">$<%= devengado.toLocaleString('es-CO') %></strong>
+    </div>
+    <div style="background:#FADBD8;border:1px solid #F1948A;border-radius:6px;padding:8px 12px;text-align:center;">
+      <span style="color:var(--muted);display:block;">Total deducciones</span>
+      <strong style="color:#C0392B;">$<%= deducciones.toLocaleString('es-CO') %></strong>
+    </div>
+    <div style="background:#D5E8D4;border:1px solid #A9DFBF;border-radius:6px;padding:8px 12px;text-align:center;">
+      <span style="color:var(--muted);display:block;">Neto a pagar</span>
+      <strong style="color:#1E8449;">$<%= neto.toLocaleString('es-CO') %></strong>
+    </div>
+  </div>
+
+  <details style="margin-top:12px;">
+    <summary style="cursor:pointer;font-size:12px;font-weight:600;color:#1F3864;">Ver XML completo (Nómina Electrónica)</summary>
+    <pre style="background:#F8FAFC;border:1px solid #ddd;border-radius:6px;padding:12px;font-size:10.5px;overflow-x:auto;margin-top:8px;line-height:1.5;"><%= xmlDoc %></pre>
+  </details>
+
+  <div style="margin-top:12px;font-size:11px;color:var(--muted);">
+    🔗 Verificación QR (simulada): <code style="font-size:10px;"><%= qrData %></code>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

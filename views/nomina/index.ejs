@@ -121,7 +121,10 @@ const totCost  = nomina.reduce((a,x)=>a+n(x.salario_basico)+n(x.auxilio_transpor
     <td class="r vr"><% if(dret>0){ %>($<%= dret.toLocaleString('es-CO') %>)<% }else{ %><span style="color:#aaa">$0</span><% } %></td>
     <td class="r vg">$<%= neto.toLocaleString('es-CO') %></td>
     <td class="r" style="color:#C0392B;">$<%= cost.toLocaleString('es-CO') %></td>
-    <td class="c"><span class="bdg <%= x.documento_soporte_generado?'bdg-si':'bdg-no' %>"><%= x.documento_soporte_generado?'✓ Generado':'Pendiente' %></span></td>
+    <td class="c">
+      <span class="bdg <%= x.documento_soporte_generado?'bdg-si':'bdg-no' %>"><%= x.documento_soporte_generado?'✓ Generado':'Pendiente' %></span><br>
+      <a href="/nomina/documento/<%= x.empleado_id %>/<%= mes %>" style="font-size:10px;color:#1E5631;font-weight:600;text-decoration:none;">📄 Ver XML/CUNE</a>
+    </td>
   </tr>
   <% }) %>
   </tbody>
