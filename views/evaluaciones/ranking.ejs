@@ -18,7 +18,8 @@
 <% } %>
 
 <% if (user.rol === 'docente' || user.rol === 'admin') {
-  const _estudiantes = (typeof estudiantes !== 'undefined') ? estudiantes : [];
+  const _codigoDesactualizado = (typeof estudiantes === 'undefined');
+  const _estudiantes = _codigoDesactualizado ? [] : estudiantes;
 %>
   <div class="form-card">
     <h3>🔄 Resetear evaluaciones de un estudiante</h3>
@@ -56,9 +57,13 @@
       </div>
       <button type="submit" class="btn btn-danger" style="margin-top:1rem;">Resetear evaluación(es)</button>
     </form>
-    <% if (!_estudiantes.length) { %>
+    <% if (_codigoDesactualizado) { %>
       <p style="font-size:11px; color: var(--muted); margin-top: 0.5rem;">
         (No se cargó la lista de estudiantes — verifica que el servidor esté actualizado con la última versión de <code>src/routes/evaluaciones.js</code>.)
+      </p>
+    <% } else if (!_estudiantes.length) { %>
+      <p style="font-size:11px; color: var(--muted); margin-top: 0.5rem;">
+        (No hay estudiantes registrados con rol "estudiante" todavía.)
       </p>
     <% } %>
   </div>
