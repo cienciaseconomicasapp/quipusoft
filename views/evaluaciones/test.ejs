@@ -18,19 +18,19 @@
       <p style="margin-bottom: 1rem; font-size: 14px;"><%= p.pregunta %></p>
 
       <div class="form-group">
-        <label><input type="radio" name="respuestas[<%= p.id %>]" value="A" required> A) <%= p.opcion_a %></label>
+        <label><input type="radio" name="respuestas[q_<%= p.id %>]" value="A" required> A) <%= p.opcion_a %></label>
       </div>
       <div class="form-group">
-        <label><input type="radio" name="respuestas[<%= p.id %>]" value="B"> B) <%= p.opcion_b %></label>
+        <label><input type="radio" name="respuestas[q_<%= p.id %>]" value="B"> B) <%= p.opcion_b %></label>
       </div>
       <div class="form-group">
-        <label><input type="radio" name="respuestas[<%= p.id %>]" value="C"> C) <%= p.opcion_c %></label>
+        <label><input type="radio" name="respuestas[q_<%= p.id %>]" value="C"> C) <%= p.opcion_c %></label>
       </div>
       <div class="form-group">
-        <label><input type="radio" name="respuestas[<%= p.id %>]" value="D"> D) <%= p.opcion_d %></label>
+        <label><input type="radio" name="respuestas[q_<%= p.id %>]" value="D"> D) <%= p.opcion_d %></label>
       </div>
 
-      <input type="hidden" name="tiempos[<%= p.id %>]" class="tiempo-input" value="0">
+      <input type="hidden" name="tiempos[q_<%= p.id %>]" class="tiempo-input" value="0">
 
       <div style="margin-top: 1rem; display:flex; justify-content: space-between; align-items:center;">
         <span style="font-size:12px; color: var(--muted);">⏱ Tiempo en esta pregunta: <span class="cronometro">0</span>s</span>
