@@ -59,4 +59,112 @@
   <% } %>
   <a href="/transacciones" class="btn btn-secondary">Volver al libro</a>
 </div>
+
+<% if(transaccion.tipo && transaccion.tipo.toLowerCase().includes('venta') && transaccion.documento && transaccion.documento.startsWith('FV')){ %>
+<%
+  // Generar CUFE real con SHA-384 — Anexo Técnico FE v1.9 Res. 000165/2023
+  const crypto = require('crypto');
+  const fechaISO = new Date(transaccion.fecha).toISOString().split('T')[0];
+  const horaISO = '08:00:00-05:00';
+  const NIT_EMISOR = '900123456';
+  const NIT_ADQ = (transaccion.contraparte_codigo || '000000000').replace(/\D/g,'').padEnd(9,'0').slice(0,9);
+  const valFac = Number(transaccion.subtotal).toFixed(2);
+  const valIva = Number(transaccion.iva).toFixed(2);
+  const valTot = Number(transaccion.total).toFixed(2);
+  const clTec  = 'fc8eac422eba16e22ffd8c6f94b3f40a4ce8c1ff'; // clave técnica simulada (constante de prueba DIAN)
+
+  const cufeInput = `${transaccion.documento}${fechaISO}${horaISO}${valFac}01${valIva}${valTot}${NIT_EMISOR}${NIT_ADQ}${clTec}`;
+  const cufe = crypto.createHash('sha384').update(cufeInput).digest('hex');
+
+  const qrData = `https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=${cufe}`;
+
+  // XML simulado (UBL 2.1) — únicamente para fines pedagógicos
+  const xmlDoc = `<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
+  <cbc:UBLVersionID>UBL 2.1</cbc:UBLVersionID>
+  <cbc:ID>${transaccion.documento}</cbc:ID>
+  <cbc:IssueDate>${fechaISO}</cbc:IssueDate>
+  <cbc:IssueTime>${horaISO}</cbc:IssueTime>
+  <cbc:InvoiceTypeCode>01</cbc:InvoiceTypeCode>
+  <cbc:UUID schemeName="CUFE-SHA384">${cufe}</cbc:UUID>
+  <cac:AccountingSupplierParty>
+    <cbc:CompanyID>${NIT_EMISOR}</cbc:CompanyID>
+    <cbc:RegistrationName>INVERSIONES UNIATLANTICO S.A.S.</cbc:RegistrationName>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cbc:CompanyID>${NIT_ADQ}</cbc:CompanyID>
+    <cbc:RegistrationName>${transaccion.contraparte_nombre}</cbc:RegistrationName>
+  </cac:AccountingCustomerParty>
+  <cac:InvoiceLine>
+    <cbc:Description>${transaccion.concepto}</cbc:Description>
+    <cbc:LineExtensionAmount currencyID="COP">${valFac}</cbc:LineExtensionAmount>
+    <cac:TaxTotal>
+      <cbc:TaxAmount currencyID="COP">${valIva}</cbc:TaxAmount>
+      <cac:TaxSubtotal><cbc:Percent>19.00</cbc:Percent></cac:TaxSubtotal>
+    </cac:TaxTotal>
+  </cac:InvoiceLine>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID="COP">${valFac}</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID="COP">${valFac}</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="COP">${valTot}</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID="COP">${valTot}</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+</Invoice>`;
+%>
+
+<div class="form-card" style="margin-top:1rem;">
+  <h3>📄 Documento XML — Factura Electrónica (UBL 2.1)</h3>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+    Estructura simulada según Anexo Técnico FE v1.9 — Resolución 000165/2023 DIAN. Generado con fines pedagógicos.
+  </p>
+
+  <div style="background:#1F3864;color:#fff;padding:10px 14px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;">
+    CUFE — Código Único de Factura Electrónica (SHA-384, 96 caracteres)
+  </div>
+  <div style="background:#0d1b2e;color:#7FFFD4;padding:12px 14px;border-radius:0 0 6px 6px;font-family:monospace;font-size:11px;word-break:break-all;line-height:1.6;">
+    <%= cufe %>
+  </div>
+
+  <div style="margin-top:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:12px;">
+    <div style="background:#F8FAFC;border:1px solid #eee;border-radius:6px;padding:8px 12px;">
+      <span style="color:var(--muted);">NumFac (ID)</span><br><strong><%= transaccion.documento %></strong>
+    </div>
+    <div style="background:#F8FAFC;border:1px solid #eee;border-radius:6px;padding:8px 12px;">
+      <span style="color:var(--muted);">FecFac + HorFac</span><br><strong><%= fechaISO %> <%= horaISO %></strong>
+    </div>
+    <div style="background:#F8FAFC;border:1px solid #eee;border-radius:6px;padding:8px 12px;">
+      <span style="color:var(--muted);">NitFac (emisor)</span><br><strong><%= NIT_EMISOR %> — Inversiones Uniatlantico S.A.S.</strong>
+    </div>
+    <div style="background:#F8FAFC;border:1px solid #eee;border-radius:6px;padding:8px 12px;">
+      <span style="color:var(--muted);">NitAdq (adquiriente)</span><br><strong><%= NIT_ADQ %> — <%= transaccion.contraparte_nombre %></strong>
+    </div>
+    <div style="background:#F8FAFC;border:1px solid #eee;border-radius:6px;padding:8px 12px;">
+      <span style="color:var(--muted);">ValFac (subtotal)</span><br><strong>$<%= Number(valFac).toLocaleString('es-CO') %></strong>
+    </div>
+    <div style="background:#F8FAFC;border:1px solid #eee;border-radius:6px;padding:8px 12px;">
+      <span style="color:var(--muted);">ValTotFac (total)</span><br><strong>$<%= Number(valTot).toLocaleString('es-CO') %></strong>
+    </div>
+  </div>
+
+  <details style="margin-top:12px;">
+    <summary style="cursor:pointer;font-size:12px;font-weight:600;color:#1F3864;">Ver XML completo (UBL 2.1)</summary>
+    <pre style="background:#F8FAFC;border:1px solid #ddd;border-radius:6px;padding:12px;font-size:10.5px;overflow-x:auto;margin-top:8px;line-height:1.5;"><%= xmlDoc %></pre>
+  </details>
+
+  <div style="margin-top:12px;font-size:11px;color:var(--muted);">
+    🔗 Verificación QR (simulada): <code style="font-size:10px;"><%= qrData %></code>
+  </div>
+
+  <% if(transaccion.estado === 'rechazada'){ %>
+  <div style="margin-top:12px;background:#FADBD8;border-left:4px solid var(--red);padding:10px 14px;border-radius:0 6px 6px 0;font-size:12px;color:var(--red);">
+    ⚠ <strong>Estado DIAN: RECHAZADA</strong> — Aunque el CUFE se calculó correctamente, este documento NO produce efectos tributarios (Art. 771-2 ET) hasta que se corrija mediante nota crédito y se reexpida.
+  </div>
+  <% } else { %>
+  <div style="margin-top:12px;background:#D5E8D4;border-left:4px solid #1E8449;padding:10px 14px;border-radius:0 6px 6px 0;font-size:12px;color:#1E5631;">
+    ✓ <strong>Estado DIAN: ACEPTADA</strong> — Documento válido, soporta costos/deducciones e IVA descontable (Art. 771-2 ET).
+  </div>
+  <% } %>
+</div>
+<% } %>
+
 <%- include('../partials/footer') %>
