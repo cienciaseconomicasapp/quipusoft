@@ -17,7 +17,9 @@
   </div>
 <% } %>
 
-<% if (user.rol === 'docente' || user.rol === 'admin') { %>
+<% if (user.rol === 'docente' || user.rol === 'admin') {
+  const _estudiantes = (typeof estudiantes !== 'undefined') ? estudiantes : [];
+%>
   <div class="form-card">
     <h3>🔄 Resetear evaluaciones de un estudiante</h3>
     <p style="font-size:12px; color: var(--muted); margin-bottom: 1rem;">
@@ -29,7 +31,7 @@
           <label>Estudiante</label>
           <select name="usuario_id" required>
             <option value="">Selecciona un estudiante...</option>
-            <% estudiantes.forEach(e => { %>
+            <% _estudiantes.forEach(e => { %>
               <option value="<%= e.id %>">
                 <%= e.nombre %> — <%= e.email %>
                 <% if (e.semanas_con_intentos && e.semanas_con_intentos.length) { %>
@@ -54,6 +56,11 @@
       </div>
       <button type="submit" class="btn btn-danger" style="margin-top:1rem;">Resetear evaluación(es)</button>
     </form>
+    <% if (!_estudiantes.length) { %>
+      <p style="font-size:11px; color: var(--muted); margin-top: 0.5rem;">
+        (No se cargó la lista de estudiantes — verifica que el servidor esté actualizado con la última versión de <code>src/routes/evaluaciones.js</code>.)
+      </p>
+    <% } %>
   </div>
 <% } %>
 
