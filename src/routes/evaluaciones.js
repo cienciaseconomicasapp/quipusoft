@@ -21,6 +21,11 @@ router.use(async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────
 // VISTA PRINCIPAL — selección de semana + resultados propios + ranking
 // ─────────────────────────────────────────────────────────────────────────
+// Endpoint de diagnóstico — confirma qué versión del archivo está desplegada
+router.get('/_version', (req, res) => {
+  res.json({ file: 'src/routes/evaluaciones.js', version: 'estudiantes-reset-v2', tieneRutaReset: true });
+});
+
 router.get('/', requireAuth, async (req, res) => {
   try {
     const [intentos, semanas] = await Promise.all([
@@ -121,8 +126,9 @@ router.post('/semana/:semana/enviar', requireAuth, async (req, res) => {
     const detalleRespuestas = [];
 
     for (const p of preguntas.rows) {
-      const seleccion = (respuestas[p.id] || '').toUpperCase();
-      const tiempoSeg = Math.max(0, parseInt(tiempos[p.id], 10) || 0);
+      const key = `q_${p.id}`;
+      const seleccion = (respuestas[key] || '').toUpperCase();
+      const tiempoSeg = Math.max(0, parseInt(tiempos[key], 10) || 0);
       const esCorrecta = seleccion === p.respuesta_correcta;
       const puntaje = calcularPuntaje(esCorrecta, tiempoSeg);
 
@@ -277,6 +283,21 @@ router.get('/ranking', requireAuth, async (req, res) => {
       if (miPosicionGlobal === 0) miPosicionGlobal = null;
     }
 
+    // Lista de estudiantes con su progreso de evaluaciones (solo para docente)
+    let estudiantes = [];
+    if (req.user.rol === 'docente' || req.user.rol === 'admin') {
+      const est = await pool.query(
+        `SELECT u.id, u.nombre, u.email,
+                ARRAY_AGG(DISTINCT ei.semana) FILTER (WHERE ei.semana IS NOT NULL) AS semanas_con_intentos
+         FROM usuarios u
+         LEFT JOIN evaluaciones_intentos ei ON ei.usuario_id = u.id
+         WHERE u.rol = 'estudiante'
+         GROUP BY u.id, u.nombre, u.email
+         ORDER BY u.nombre`
+      );
+      estudiantes = est.rows;
+    }
+
     res.render('evaluaciones/ranking', {
       title: 'Ranking — Quipusoft',
       user: req.user,
@@ -284,6 +305,7 @@ router.get('/ranking', requireAuth, async (req, res) => {
       rankingGlobal,
       miPosicionGlobal,
       semanaFiltro: semanaQuery,
+      estudiantes,
     });
   } catch (err) {
     console.error(err);
@@ -382,6 +404,65 @@ router.post('/admin/:id/eliminar', requireDocente, async (req, res) => {
     console.error(err);
     req.flash('error', 'Error eliminando la pregunta.');
     res.redirect(`/evaluaciones/admin?semana=${semana}`);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// DOCENTE — resetear intentos de evaluación de un estudiante
+// (por semana específica o todas), para corregir calificaciones afectadas
+// por errores técnicos previos.
+// ─────────────────────────────────────────────────────────────────────────
+router.post('/admin/resetear-intentos', requireDocente, async (req, res) => {
+  const { usuario_id, semana } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    let intentosQuery, params;
+    if (semana && semana !== 'todas') {
+      intentosQuery = `SELECT id FROM evaluaciones_intentos WHERE usuario_id = $1 AND semana = $2`;
+      params = [usuario_id, parseInt(semana)];
+    } else {
+      intentosQuery = `SELECT id FROM evaluaciones_intentos WHERE usuario_id = $1`;
+      params = [usuario_id];
+    }
+
+    const intentos = await client.query(intentosQuery, params);
+    const ids = intentos.rows.map(r => r.id);
+
+    if (ids.length > 0) {
+      await client.query(`DELETE FROM evaluaciones_respuestas WHERE intento_id = ANY($1)`, [ids]);
+      await client.query(
+        semana && semana !== 'todas'
+          ? `DELETE FROM evaluaciones_intentos WHERE usuario_id = $1 AND semana = $2`
+          : `DELETE FROM evaluaciones_intentos WHERE usuario_id = $1`,
+        params
+      );
+    }
+
+    // También revertir el progreso marcado como completado para la(s) semana(s) reseteada(s)
+    if (semana && semana !== 'todas') {
+      await client.query(
+        `DELETE FROM progreso_estudiantes WHERE usuario_id = $1 AND semana = $2 AND actividad = $3`,
+        [usuario_id, parseInt(semana), `Evaluación semana ${semana}`]
+      );
+    } else {
+      await client.query(
+        `DELETE FROM progreso_estudiantes WHERE usuario_id = $1 AND actividad LIKE 'Evaluación semana%'`,
+        [usuario_id]
+      );
+    }
+
+    await client.query('COMMIT');
+    req.flash('success', `Se reseteraron ${ids.length} intento(s) de evaluación correctamente. El estudiante puede volver a presentar la(s) evaluación(es).`);
+    res.redirect(req.get('Referer') || '/evaluaciones/ranking');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    req.flash('error', 'Error reseteando los intentos del estudiante.');
+    res.redirect(req.get('Referer') || '/evaluaciones/ranking');
+  } finally {
+    client.release();
   }
 });
 
