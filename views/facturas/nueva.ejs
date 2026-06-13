@@ -1,9 +1,9 @@
 <%- include('../partials/header') %>
 <%- include('../partials/erp-header', {
-  icon: '🧾', title: 'Facturación',
+  icon: '🧾', title: 'Transacciones contables',
   tabs: [
-    { label: 'Listado de transacciones', href: '/transacciones', active: false },
-    { label: 'Administración de transacciones', href: '/transacciones/nueva/form', active: true },
+    { label: 'Administración de transacciones contables', href: '/transacciones/nueva/form', active: true },
+    { label: 'Listado de transacciones contables', href: '/transacciones', active: false },
   ]
 }) %>
 
@@ -11,11 +11,130 @@
   <div class="alert alert-error" style="margin-bottom:1rem;"><%= error %></div>
 <% } %>
 
-<form method="POST" action="/transacciones/nueva" id="form-transaccion">
+<!-- ═══════════════════════════════════════════════════════════════════
+     SELECTOR DE TIPO DE DOCUMENTO — decide qué formulario se muestra
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="erp-form-card">
+  <div class="erp-form-card-title">Tipo de documento</div>
+  <div class="erp-form-body">
+    <div class="erp-form-field span-2">
+      <label>Selecciona el tipo de documento que vas a registrar<span class="req">*</span></label>
+      <div class="erp-field-wrap valid">
+        <select class="erp-select" id="selector-doc">
+          <option value="">Seleccionar...</option>
+          <optgroup label="Facturación electrónica (con ítems)">
+            <option value="FV">FV - Factura electrónica de venta</option>
+            <option value="FC">FC - Factura electrónica de compra</option>
+          </optgroup>
+          <optgroup label="Asiento manual (partida doble)">
+            <option value="CE">CE - Comprobante de egreso</option>
+            <option value="CR">CR - Comprobante de recibo</option>
+            <option value="NC">NC - Nota de contabilidad</option>
+          </optgroup>
+        </select>
+        <span class="erp-check">✓</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     FORMULARIO A — ASIENTO MANUAL (CE / CR / NC)
+     "Agregue o edite movimientos" — partida doble
+     ═══════════════════════════════════════════════════════════════════ -->
+<form method="POST" action="/transacciones/nuevo-asiento" id="form-asiento" style="display:none;">
+
+  <div class="erp-form-card">
+    <div class="erp-form-card-title" id="titulo-asiento">Agregue o edite movimientos</div>
+    <div class="erp-form-body">
+      <div class="erp-form-field">
+        <label>Fecha<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <input class="erp-input" type="date" name="fecha" id="asiento-fecha" required min="2025-01-01" max="2025-12-31">
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+      <div class="erp-form-field">
+        <label>Fuente<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <input class="erp-input" type="text" id="asiento-fuente-label" value="" readonly style="background:var(--gray);">
+          <input type="hidden" name="fuente" id="asiento-fuente">
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+      <div class="erp-form-field">
+        <label>Número</label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" id="asiento-numero" readonly placeholder="Se genera automáticamente" style="background:var(--gray);">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="erp-items-card">
+    <div class="erp-items-head">
+      <span>Movimientos</span>
+      <button type="button" id="btn-agregar-fila-asiento" class="erp-btn erp-btn-green"><span class="erp-btn-icon">＋</span> Agregar línea</button>
+    </div>
+    <div class="erp-items-table-wrap">
+      <table class="erp-items-table" id="tabla-asiento">
+        <thead>
+          <tr>
+            <th style="width:40px">No.</th>
+            <th style="min-width:200px">Cuenta</th>
+            <th style="width:90px"><u>Ref</u> 1</th>
+            <th style="width:110px">Centro</th>
+            <th style="width:160px">Tercero</th>
+            <th>Detalle</th>
+            <th class="r" style="width:130px">Débito</th>
+            <th class="r" style="width:130px">Crédito</th>
+            <th class="r" style="width:110px">IVA</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="asiento-body">
+          <!-- filas agregadas por JS -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6">Totales</td>
+            <td class="r" id="asiento-total-debito">0.00</td>
+            <td class="r" id="asiento-total-credito">0.00</td>
+            <td class="r" id="asiento-total-iva">-</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div style="padding:0 16px 16px;">
+      <span id="asiento-balance-msg" style="font-size:12.5px;font-weight:600;"></span>
+    </div>
+  </div>
+
+  <div class="erp-form-card">
+    <div class="erp-form-card-title">Observaciones</div>
+    <div class="erp-form-body erp-form-full">
+      <div class="erp-form-field">
+        <textarea class="erp-input" name="observaciones" rows="3" placeholder="Observaciones del asiento (opcional)" style="resize:vertical;"></textarea>
+        <input type="hidden" name="concepto_general" id="asiento-concepto-general">
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:1rem;margin-bottom:2rem;">
+    <button type="submit" class="erp-btn erp-btn-blue"><span class="erp-btn-icon">💾</span> Guardar</button>
+    <a href="/transacciones" class="erp-btn erp-btn-outline">Cancelar</a>
+  </div>
+</form>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     FORMULARIO B — FACTURACIÓN ELECTRÓNICA (FV / FC)
+     ═══════════════════════════════════════════════════════════════════ -->
+<form method="POST" action="/transacciones/nueva" id="form-factura" style="display:none;">
 
   <div class="erp-form-card">
     <div class="erp-form-card-note">
-      Campos marcados con asterisco (<span class="req">*</span>) son obligatorios para guardar la transacción
+      Campos marcados con asterisco (<span class="req">*</span>) son obligatorios para guardar la factura
     </div>
     <div class="erp-form-body">
 
@@ -31,11 +150,10 @@
       </div>
 
       <div class="erp-form-field">
-        <label>Tipo de transacción<span class="req">*</span></label>
+        <label>Tipo factura<span class="req">*</span></label>
         <div class="erp-field-wrap valid">
           <select class="erp-select" name="tipo" id="tipo" required>
-            <option value="">Seleccionar...</option>
-            <option value="Factura venta">Factura de venta</option>
+            <option value="Factura venta">Factura de venta nacional</option>
             <option value="Factura venta consultoría">Factura venta consultoría</option>
             <option value="Factura compra">Factura de compra</option>
             <option value="Nota crédito">Nota crédito</option>
@@ -50,18 +168,16 @@
       <div class="erp-form-field">
         <label>Fuente<span class="req">*</span></label>
         <div class="erp-field-wrap valid">
-          <select class="erp-select" name="fuente">
-            <option value="FE">FE - Factura electrónica</option>
-            <option value="CE">CE - Comprobante de egreso</option>
-            <option value="CR">CR - Comprobante de recibo</option>
-            <option value="NC">NC - Nota de contabilidad</option>
+          <select class="erp-select" name="fuente" id="factura-fuente-select">
+            <option value="FE-FV">FE - FACTURA ELECTRÓNICA DE VENTA</option>
+            <option value="FE-FC">FE - FACTURA ELECTRÓNICA DE COMPRA</option>
           </select>
           <span class="erp-check">✓</span>
         </div>
       </div>
 
       <div class="erp-form-field">
-        <label>Número de documento<span class="req">*</span></label>
+        <label>Número<span class="req">*</span></label>
         <div class="erp-field-wrap valid">
           <input class="erp-input" type="text" name="documento" placeholder="Ej: FV-100" required>
           <span class="erp-check">✓</span>
@@ -69,7 +185,7 @@
       </div>
 
       <div class="erp-form-field">
-        <label>Fecha del documento<span class="req">*</span></label>
+        <label>Fecha factura<span class="req">*</span></label>
         <div class="erp-field-wrap valid">
           <input class="erp-input" type="date" name="fecha" required min="2025-01-01" max="2025-12-31">
           <span class="erp-check">✓</span>
@@ -77,16 +193,17 @@
       </div>
 
       <div class="erp-form-field">
-        <label>Fecha de vencimiento</label>
-        <div class="erp-field-wrap">
+        <label>Fecha vencimiento<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
           <input class="erp-input" type="date" name="fecha_vencimiento" min="2025-01-01" max="2026-12-31">
+          <span class="erp-check">✓</span>
         </div>
       </div>
 
       <div class="erp-form-field span-2">
-        <label>Contraparte (cliente o proveedor)<span class="req">*</span></label>
+        <label>Cliente<span class="req">*</span></label>
         <div class="erp-field-wrap">
-          <input class="erp-input" type="text" name="contraparte_nombre" id="contraparte_nombre" placeholder="Escriba el nombre y selecciónelo del listado" required list="lista-contrapartes">
+          <input class="erp-input" type="text" name="contraparte_nombre" id="contraparte_nombre" placeholder="Escriba documento o nombre y seleccione del listado" required list="lista-contrapartes">
           <a href="#" class="erp-btn-add" title="Buscar contraparte">+</a>
         </div>
         <datalist id="lista-contrapartes">
@@ -183,18 +300,6 @@
       </div>
 
       <div class="erp-form-field">
-        <label>Tipo de IVA<span class="req">*</span></label>
-        <div class="erp-field-wrap valid">
-          <select class="erp-select" name="tipo_iva" id="tipo_iva">
-            <option value="gravado">Gravado (19%)</option>
-            <option value="exento">Exento (0%)</option>
-            <option value="excluido">Excluido</option>
-          </select>
-          <span class="erp-check">✓</span>
-        </div>
-      </div>
-
-      <div class="erp-form-field">
         <label>Moneda<span class="req">*</span></label>
         <div class="erp-field-wrap valid">
           <select class="erp-select" name="moneda">
@@ -211,12 +316,14 @@
         </div>
       </div>
 
+      <input type="hidden" name="tipo_iva" id="tipo_iva" value="gravado">
+
     </div>
   </div>
 
   <div class="erp-items-card">
     <div class="erp-items-head">
-      <span>Ítems</span>
+      <span>Items</span>
       <button type="button" id="btn-agregar-linea" class="erp-btn erp-btn-green"><span class="erp-btn-icon">＋</span> Agregar línea</button>
     </div>
     <div class="erp-items-table-wrap">
@@ -256,7 +363,6 @@
     </div>
   </div>
 
-  <!-- Concepto general de la transacción (se guarda en backend) -->
   <div class="erp-form-card">
     <div class="erp-form-card-title">Concepto y retención</div>
     <div class="erp-form-body">
@@ -281,7 +387,6 @@
     </div>
   </div>
 
-  <!-- Inputs ocultos que se envían al backend (compatibilidad con el modelo actual) -->
   <input type="hidden" name="subtotal" id="subtotal_hidden" value="0">
   <input type="hidden" name="iva" id="iva_hidden" value="0">
 
@@ -291,18 +396,162 @@
   </div>
 </form>
 
+<!-- Datos para autocompletar la grilla de asiento (cuentas y terceros) -->
+<datalist id="lista-cuentas">
+  <% cuentas.forEach(c => { %><option value="<%= c.codigo %> - <%= c.nombre %>"><% }) %>
+</datalist>
+<datalist id="lista-terceros">
+  <% terceros.forEach(t => { %><option value="<%= t.nombre %>"><%= t.codigo %> — <%= t.tipo %></option><% }) %>
+</datalist>
+
 <script>
 (function() {
-  const tbody = document.getElementById('items-body');
-  const tipoIvaSelect = document.getElementById('tipo_iva');
+  // ═══════════════════════════════════════════════════════════════════
+  // SELECTOR DE TIPO DE DOCUMENTO
+  // ═══════════════════════════════════════════════════════════════════
+  const selector = document.getElementById('selector-doc');
+  const formAsiento = document.getElementById('form-asiento');
+  const formFactura = document.getElementById('form-factura');
 
-  function tarifaIva() {
-    const v = tipoIvaSelect.value;
-    if (v === 'gravado') return 0.19;
-    return 0; // exento / excluido
+  const FUENTES_ASIENTO = {
+    CE: 'CE - COMPROBANTE DE EGRESO',
+    CR: 'CR - COMPROBANTE DE RECIBO',
+    NC: 'NC - NOTA DE CONTABILIDAD',
+  };
+
+  async function actualizarNumeroAsiento(fuente) {
+    const input = document.getElementById('asiento-numero');
+    input.value = 'Calculando...';
+    try {
+      const resp = await fetch('/transacciones/nuevo-asiento/siguiente-numero?fuente=' + fuente);
+      const data = await resp.json();
+      input.value = data.numero || '';
+    } catch (e) {
+      input.value = '';
+    }
   }
 
-  function nuevaFila() {
+  selector.addEventListener('change', function() {
+    const val = selector.value;
+    formAsiento.style.display = 'none';
+    formFactura.style.display = 'none';
+
+    if (val === 'FV' || val === 'FC') {
+      formFactura.style.display = '';
+      document.getElementById('factura-fuente-select').value = val === 'FV' ? 'FE-FV' : 'FE-FC';
+      document.getElementById('tipo').value = val === 'FV' ? 'Factura venta' : 'Factura compra';
+      document.getElementById('tipo_iva').value = val === 'FV' ? 'gravado' : 'gravado';
+    } else if (val === 'CE' || val === 'CR' || val === 'NC') {
+      formAsiento.style.display = '';
+      document.getElementById('asiento-fuente').value = val;
+      document.getElementById('asiento-fuente-label').value = FUENTES_ASIENTO[val];
+      document.getElementById('titulo-asiento').textContent = 'Agregue o edite movimientos — ' + FUENTES_ASIENTO[val];
+      actualizarNumeroAsiento(val);
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
+  // FORMULARIO A — ASIENTO MANUAL (grilla cuenta / débito / crédito)
+  // ═══════════════════════════════════════════════════════════════════
+  const asientoBody = document.getElementById('asiento-body');
+  let asientoFilaNum = 0;
+
+  function fmt2(n) {
+    return n.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function nuevaFilaAsiento() {
+    asientoFilaNum++;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="c fila-num">` + asientoFilaNum + `</td>
+      <td>
+        <div class="erp-cell-search">
+          <input type="text" class="erp-cell-input linea-cuenta" name="lineas_cuenta[]" list="lista-cuentas" placeholder="Código - Nombre cuenta">
+        </div>
+      </td>
+      <td><input type="text" class="erp-cell-input linea-ref1" name="lineas_ref1[]" value="0"></td>
+      <td><input type="text" class="erp-cell-input linea-centro" name="lineas_centro[]" value="0"></td>
+      <td><input type="text" class="erp-cell-input linea-tercero" name="lineas_tercero[]" list="lista-terceros" value=""></td>
+      <td><input type="text" class="erp-cell-input linea-detalle" name="lineas_detalle[]"></td>
+      <td><input type="number" class="erp-cell-input linea-debito text-right" name="lineas_debito[]" value="0.00" step="0.01"></td>
+      <td><input type="number" class="erp-cell-input linea-credito text-right" name="lineas_credito[]" value="0.00" step="0.01"></td>
+      <td><input type="number" class="erp-cell-input linea-iva text-right" value="0.00" step="0.01"></td>
+      <td><button type="button" class="erp-row-remove" title="Eliminar línea">🗑</button></td>
+    `;
+    asientoBody.appendChild(tr);
+    tr.querySelectorAll('.linea-debito, .linea-credito').forEach(el => el.addEventListener('input', recalcularAsiento));
+    tr.querySelector('.erp-row-remove').addEventListener('click', function() {
+      tr.remove();
+      renumerarFilas();
+      recalcularAsiento();
+    });
+    recalcularAsiento();
+  }
+
+  function renumerarFilas() {
+    let n = 0;
+    asientoBody.querySelectorAll('tr').forEach(tr => {
+      n++;
+      tr.querySelector('.fila-num').textContent = n;
+    });
+  }
+
+  function recalcularAsiento() {
+    let totDeb = 0, totCred = 0;
+    asientoBody.querySelectorAll('tr').forEach(tr => {
+      totDeb += parseFloat(tr.querySelector('.linea-debito').value) || 0;
+      totCred += parseFloat(tr.querySelector('.linea-credito').value) || 0;
+    });
+    document.getElementById('asiento-total-debito').textContent = fmt2(totDeb);
+    document.getElementById('asiento-total-credito').textContent = fmt2(totCred);
+
+    const msg = document.getElementById('asiento-balance-msg');
+    const diff = Math.abs(totDeb - totCred);
+    if (diff < 0.01 && (totDeb > 0 || totCred > 0)) {
+      msg.textContent = '✅ El asiento cuadra: Débitos = Créditos = ' + fmt2(totDeb);
+      msg.style.color = 'var(--erp-check-green)';
+    } else if (diff >= 0.01) {
+      msg.textContent = '⚠ El asiento no cuadra. Diferencia: ' + fmt2(diff) + ' (Débitos: ' + fmt2(totDeb) + ' / Créditos: ' + fmt2(totCred) + ')';
+      msg.style.color = '#C0392B';
+    } else {
+      msg.textContent = '';
+    }
+  }
+
+  document.getElementById('btn-agregar-fila-asiento').addEventListener('click', nuevaFilaAsiento);
+
+  formAsiento.addEventListener('submit', function(e) {
+    let totDeb = 0, totCred = 0;
+    asientoBody.querySelectorAll('tr').forEach(tr => {
+      totDeb += parseFloat(tr.querySelector('.linea-debito').value) || 0;
+      totCred += parseFloat(tr.querySelector('.linea-credito').value) || 0;
+    });
+    if (Math.abs(totDeb - totCred) > 0.01) {
+      e.preventDefault();
+      alert('El asiento no cuadra: Débitos (' + fmt2(totDeb) + ') debe ser igual a Créditos (' + fmt2(totCred) + ') antes de guardar.');
+      return;
+    }
+    // Resumen del concepto general a partir del detalle de la primera línea con texto
+    const primerDetalle = [...asientoBody.querySelectorAll('.linea-detalle')].map(i => i.value).find(v => v);
+    document.getElementById('asiento-concepto-general').value = primerDetalle || '';
+  });
+
+  // Filas iniciales (3 por defecto, como un asiento típico)
+  nuevaFilaAsiento();
+  nuevaFilaAsiento();
+
+  // ═══════════════════════════════════════════════════════════════════
+  // FORMULARIO B — FACTURACIÓN (ítems con cálculo de IVA)
+  // ═══════════════════════════════════════════════════════════════════
+  const tbody = document.getElementById('items-body');
+  const tipoIvaInput = document.getElementById('tipo_iva');
+
+  function tarifaIva() {
+    return tipoIvaInput.value === 'gravado' ? 0.19 : 0;
+  }
+
+  function nuevaFilaFactura() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input type="text" class="erp-cell-input item-desc" placeholder="Escriba palabra clave y seleccione"></td>
@@ -319,16 +568,16 @@
       <td><button type="button" class="erp-row-remove" title="Eliminar línea">✕</button></td>
     `;
     tbody.appendChild(tr);
-    tr.querySelectorAll('input,select').forEach(function(el) { el.addEventListener('input', recalcular); });
-    tr.querySelector('.erp-row-remove').addEventListener('click', function() { tr.remove(); recalcular(); });
-    recalcular();
+    tr.querySelectorAll('input,select').forEach(function(el) { el.addEventListener('input', recalcularFactura); });
+    tr.querySelector('.erp-row-remove').addEventListener('click', function() { tr.remove(); recalcularFactura(); });
+    recalcularFactura();
   }
 
   function fmt(n) {
     return Math.round(n).toLocaleString('es-CO');
   }
 
-  function recalcular() {
+  function recalcularFactura() {
     let totalSubtotal = 0;
     let totalIva = 0;
     tbody.querySelectorAll('tr').forEach(function(tr) {
@@ -357,16 +606,11 @@
     document.getElementById('iva_hidden').value = Math.round(totalIva);
   }
 
-  document.getElementById('btn-agregar-linea').addEventListener('click', nuevaFila);
-  document.getElementById('retencion').addEventListener('input', recalcular);
-  tipoIvaSelect.addEventListener('change', function() {
-    const tarifa = tarifaIva() * 100;
-    tbody.querySelectorAll('.item-impuesto').forEach(function(sel) { sel.value = tarifa; });
-    recalcular();
-  });
+  document.getElementById('btn-agregar-linea').addEventListener('click', nuevaFilaFactura);
+  document.getElementById('retencion').addEventListener('input', recalcularFactura);
 
-  // Fila inicial
-  nuevaFila();
+  // Fila inicial del formulario de factura
+  nuevaFilaFactura();
 })();
 </script>
 

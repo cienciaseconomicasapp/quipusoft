@@ -60,17 +60,35 @@ router.get('/:id', requireAuth, setSchema, async (req, res) => {
 });
 
 // Nueva transacción
+// Fuentes disponibles para el asiento manual y su prefijo de numeración
+const FUENTES_ASIENTO = {
+  CE: { nombre: 'CE - Comprobante de egreso', tipo_comprobante: 'Comprobante de egreso' },
+  CR: { nombre: 'CR - Comprobante de recibo', tipo_comprobante: 'Comprobante de recibo' },
+  NC: { nombre: 'NC - Nota de contabilidad', tipo_comprobante: 'Nota de contabilidad' },
+};
+
 router.get('/nueva/form', requireAuth, setSchema, async (req, res) => {
   const schema = req.schema;
-  const [clientes, proveedores] = await Promise.all([
+  const [clientes, proveedores, cuentas] = await Promise.all([
     pool.query(`SELECT * FROM "${schema}".clientes WHERE activo = TRUE ORDER BY razon_social`),
     pool.query(`SELECT * FROM "${schema}".proveedores WHERE activo = TRUE ORDER BY razon_social`),
+    pool.query(`SELECT codigo, nombre, naturaleza FROM "${schema}".plan_cuentas WHERE activa = TRUE ORDER BY codigo`),
   ]);
+
+  // Listado combinado de terceros (clientes + proveedores) para el campo "Tercero"
+  const terceros = [
+    ...clientes.rows.map(c => ({ codigo: c.codigo, nombre: c.razon_social, tipo: 'Cliente' })),
+    ...proveedores.rows.map(p => ({ codigo: p.codigo, nombre: p.razon_social, tipo: 'Proveedor' })),
+  ];
+
   res.render('facturas/nueva', {
     title: 'Nueva transacción — Quipusoft',
     user: req.user,
     clientes: clientes.rows,
     proveedores: proveedores.rows,
+    cuentas: cuentas.rows,
+    terceros,
+    fuentesAsiento: FUENTES_ASIENTO,
     error: req.flash('error'),
   });
 });
@@ -92,6 +110,156 @@ router.post('/nueva', requireAuth, setSchema, async (req, res) => {
     res.redirect('/transacciones/nueva/form');
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// ASIENTO MANUAL (Comprobante de egreso / recibo / Nota de contabilidad)
+// Usa las tablas de doble partida: asientos / asientos_detalle
+// ─────────────────────────────────────────────────────────────────────────
+
+// Devuelve el siguiente número de comprobante para una fuente dada, ej. NC-014-25
+async function siguienteNumeroComprobante(schema, fuente) {
+  const { rows } = await pool.query(
+    `SELECT numero_comprobante FROM "${schema}".asientos
+     WHERE numero_comprobante LIKE $1
+     ORDER BY id DESC LIMIT 1`,
+    [`${fuente}-%-25`]
+  );
+  let siguiente = 1;
+  if (rows.length) {
+    const m = rows[0].numero_comprobante.match(/-(\d+)-25$/);
+    if (m) siguiente = parseInt(m[1], 10) + 1;
+  }
+  return `${fuente}-${String(siguiente).padStart(3, '0')}-25`;
+}
+
+// API: obtener el siguiente número de comprobante para una fuente (usado por el frontend)
+router.get('/nuevo-asiento/siguiente-numero', requireAuth, setSchema, async (req, res) => {
+  const fuente = (req.query.fuente || '').toUpperCase();
+  if (!FUENTES_ASIENTO[fuente]) return res.status(400).json({ error: 'Fuente inválida' });
+  try {
+    const numero = await siguienteNumeroComprobante(req.schema, fuente);
+    res.json({ numero });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/nuevo-asiento', requireAuth, setSchema, async (req, res) => {
+  const schema = req.schema;
+  const { fecha, fuente, concepto_general, observaciones } = req.body;
+
+  // Las líneas llegan como arrays paralelos: lineas_cuenta[], lineas_centro[], lineas_tercero[],
+  // lineas_detalle[], lineas_debito[], lineas_credito[], lineas_ref1[]
+  const cuentas   = [].concat(req.body['lineas_cuenta[]']   || []);
+  const detalles  = [].concat(req.body['lineas_detalle[]']  || []);
+  const debitos   = [].concat(req.body['lineas_debito[]']   || []);
+  const creditos  = [].concat(req.body['lineas_credito[]']  || []);
+  const terceros  = [].concat(req.body['lineas_tercero[]']  || []);
+  const centros   = [].concat(req.body['lineas_centro[]']   || []);
+  const refs1     = [].concat(req.body['lineas_ref1[]']     || []);
+
+  const fuenteUp = (fuente || '').toUpperCase();
+
+  if (!FUENTES_ASIENTO[fuenteUp]) {
+    req.flash('error', 'Debes seleccionar una fuente válida (CE, CR o NC).');
+    return res.redirect('/transacciones/nueva/form');
+  }
+  if (!fecha) {
+    req.flash('error', 'La fecha es obligatoria.');
+    return res.redirect('/transacciones/nueva/form');
+  }
+
+  // Construir líneas válidas (con cuenta y al menos un valor en débito/crédito)
+  const lineas = [];
+  let totalDebito = 0, totalCredito = 0;
+  for (let i = 0; i < cuentas.length; i++) {
+    const cuentaCodigo = (cuentas[i] || '').split(' ')[0].trim(); // permite "130505 - CLIENTES..."
+    const debito = Math.round(parseFloat(debitos[i]) || 0);
+    const credito = Math.round(parseFloat(creditos[i]) || 0);
+    if (!cuentaCodigo && debito === 0 && credito === 0) continue; // fila vacía, ignorar
+
+    if (!cuentaCodigo) {
+      req.flash('error', `La línea ${i + 1} tiene un valor pero no tiene cuenta asignada.`);
+      return res.redirect('/transacciones/nueva/form');
+    }
+
+    lineas.push({
+      cuenta_codigo: cuentaCodigo,
+      descripcion: detalles[i] || '',
+      tercero: terceros[i] || '',
+      centro: centros[i] || '',
+      ref1: refs1[i] || '',
+      debito,
+      credito,
+    });
+    totalDebito += debito;
+    totalCredito += credito;
+  }
+
+  if (lineas.length === 0) {
+    req.flash('error', 'Debes agregar al menos una línea con cuenta y valor.');
+    return res.redirect('/transacciones/nueva/form');
+  }
+
+  // ── Validación de partida doble: Débitos = Créditos ──
+  if (Math.abs(totalDebito - totalCredito) > 0.01) {
+    req.flash('error',
+      `El asiento no cuadra: Débitos = $${totalDebito.toLocaleString('es-CO')} y Créditos = $${totalCredito.toLocaleString('es-CO')}. ` +
+      `Ajusta las líneas para que la suma de débitos sea igual a la suma de créditos antes de guardar.`
+    );
+    return res.redirect('/transacciones/nueva/form');
+  }
+
+  // Verificar que todas las cuentas existan en el plan de cuentas
+  const codigosUnicos = [...new Set(lineas.map(l => l.cuenta_codigo))];
+  const { rows: cuentasValidas } = await pool.query(
+    `SELECT codigo FROM "${schema}".plan_cuentas WHERE codigo = ANY($1)`,
+    [codigosUnicos]
+  );
+  const codigosValidos = new Set(cuentasValidas.map(c => c.codigo));
+  const codigosInvalidos = codigosUnicos.filter(c => !codigosValidos.has(c));
+  if (codigosInvalidos.length > 0) {
+    req.flash('error', `Las siguientes cuentas no existen en el plan de cuentas: ${codigosInvalidos.join(', ')}.`);
+    return res.redirect('/transacciones/nueva/form');
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const numeroComprobante = await siguienteNumeroComprobante(schema, fuenteUp);
+    const contraparteNombre = lineas.find(l => l.tercero)?.tercero || null;
+
+    const { rows: [asiento] } = await client.query(
+      `INSERT INTO "${schema}".asientos
+        (fecha, numero_comprobante, tipo_comprobante, concepto, documento_soporte, contraparte, estado)
+       VALUES ($1,$2,$3,$4,$5,$6,'aprobado')
+       RETURNING id`,
+      [fecha, numeroComprobante, FUENTES_ASIENTO[fuenteUp].tipo_comprobante,
+       concepto_general || observaciones || `Asiento ${numeroComprobante}`,
+       numeroComprobante, contraparteNombre]
+    );
+
+    for (const l of lineas) {
+      await client.query(
+        `INSERT INTO "${schema}".asientos_detalle (asiento_id, cuenta_codigo, descripcion, debito, credito)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [asiento.id, l.cuenta_codigo, l.descripcion, l.debito, l.credito]
+      );
+    }
+
+    await client.query('COMMIT');
+    req.flash('success', `Asiento ${numeroComprobante} registrado correctamente (Débitos = Créditos = $${totalDebito.toLocaleString('es-CO')}).`);
+    res.redirect('/contabilidad/libro-diario');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    req.flash('error', 'Error al guardar el asiento: ' + err.message);
+    res.redirect('/transacciones/nueva/form');
+  } finally {
+    client.release();
+  }
+});
+
 
 // Editar transacción
 router.get('/:id/editar', requireAuth, setSchema, async (req, res) => {
