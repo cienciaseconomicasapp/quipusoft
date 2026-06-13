@@ -1,4 +1,11 @@
 <%- include('../partials/header', {title: title}) %>
+<%- include('../partials/erp-header', {
+  icon: '🧾', title: 'Facturación',
+  tabs: [
+    { label: 'Listado de transacciones', href: '/transacciones', active: true },
+    { label: 'Administración de transacciones', href: '/transacciones/nueva/form', active: false },
+  ]
+}) %>
 <style>
 /* ── Layout ── */
 .tx-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;flex-wrap:wrap;gap:12px;}
@@ -66,18 +73,15 @@
 @media(max-width:700px){.iva-grid{grid-template-columns:repeat(3,1fr);}.filtros{flex-direction:column;}}
 </style>
 
-<div class="tx-header">
-  <div>
-    <h2>Libro de transacciones</h2>
-    <p>Inversiones Uniatlantico S.A.S. · AG 2025 · <%= transacciones.length %> registros</p>
-  </div>
-  <div style="display:flex;gap:8px;">
-    <a href="/transacciones/nueva/form" class="btn btn-primary" style="font-size:13px;padding:7px 14px;">+ Nueva transacción</a>
-  </div>
+<div class="erp-totales-bar" style="justify-content:space-between;">
+  <span>Inversiones Uniatlántico S.A.S. · AG 2025 · <%= transacciones.length %> registros</span>
+  <a href="/transacciones/nueva/form" class="erp-btn erp-btn-green"><span class="erp-btn-icon">＋</span> Nueva transacción</a>
 </div>
 
 <!-- FILTROS -->
-<form method="GET" action="/transacciones" class="filtros">
+<div class="erp-search-panel">
+  <div class="erp-search-panel-title">Opciones de búsqueda</div>
+  <form method="GET" action="/transacciones" class="filtros">
   <div class="filtro-g">
     <label>Mes</label>
     <select name="mes">
@@ -105,9 +109,12 @@
       <option value="anulado" <%= filtros.estado==='anulado'?'selected':'' %>>Anulado</option>
     </select>
   </div>
-  <button type="submit" class="btn-filtrar">Filtrar</button>
-  <a href="/transacciones" class="btn-limpiar">Limpiar</a>
-</form>
+  <div class="erp-actions" style="padding:0;margin-top:10px;">
+    <button type="submit" class="erp-btn erp-btn-blue"><span class="erp-btn-icon">🔎</span> Filtrar</button>
+    <a href="/transacciones" class="erp-btn erp-btn-outline">Limpiar</a>
+  </div>
+  </form>
+</div>
 
 <!-- RESUMEN IVA POR BIMESTRE -->
 <% if(ivaResumen && ivaResumen.length){ %>

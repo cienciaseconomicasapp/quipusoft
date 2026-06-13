@@ -1,76 +1,373 @@
-<%- include('../partials/header', {title: title}) %>
-<div class="page-header">
-  <h2>Nueva transacción</h2>
-  <p>Inversiones Uniatlantico S.A.S. &nbsp;|&nbsp; Año gravable 2025</p>
-</div>
+<%- include('../partials/header') %>
+<%- include('../partials/erp-header', {
+  icon: '🧾', title: 'Facturación',
+  tabs: [
+    { label: 'Listado de transacciones', href: '/transacciones', active: false },
+    { label: 'Administración de transacciones', href: '/transacciones/nueva/form', active: true },
+  ]
+}) %>
 
 <% if(error && error.length){ %>
-  <div class="alert alert-error"><%= error %></div>
+  <div class="alert alert-error" style="margin-bottom:1rem;"><%= error %></div>
 <% } %>
 
-<div class="form-card">
-  <form method="POST" action="/transacciones/nueva">
-    <div class="form-grid">
-      <div class="form-group">
-        <label>Número de documento</label>
-        <input type="text" name="documento" placeholder="FV-100" required>
-      </div>
-      <div class="form-group">
-        <label>Fecha</label>
-        <input type="date" name="fecha" required min="2025-01-01" max="2025-12-31">
-      </div>
-      <div class="form-group">
-        <label>Tipo de transacción</label>
-        <select name="tipo" required>
-          <option value="">Seleccionar...</option>
-          <option value="Factura venta">Factura de venta</option>
-          <option value="Factura venta consultoría">Factura venta consultoría</option>
-          <option value="Factura compra">Factura de compra</option>
-          <option value="Nota crédito">Nota crédito</option>
-          <option value="Nota débito">Nota débito</option>
-          <option value="Documento soporte">Documento soporte</option>
-          <option value="Activo fijo">Activo fijo</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Tipo de IVA</label>
-        <select name="tipo_iva">
-          <option value="gravado">Gravado (19%)</option>
-          <option value="exento">Exento (0%)</option>
-          <option value="excluido">Excluido</option>
-        </select>
-      </div>
+<form method="POST" action="/transacciones/nueva" id="form-transaccion">
+
+  <div class="erp-form-card">
+    <div class="erp-form-card-note">
+      Campos marcados con asterisco (<span class="req">*</span>) son obligatorios para guardar la transacción
     </div>
-    <div class="form-group">
-      <label>Contraparte (cliente o proveedor)</label>
-      <input type="text" name="contraparte_nombre" placeholder="Nombre del cliente o proveedor" required>
+    <div class="erp-form-body">
+
+      <div class="erp-form-field">
+        <label>Año<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="anno">
+            <option value="2025" selected>2025</option>
+            <option value="2026">2026</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Tipo de transacción<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="tipo" id="tipo" required>
+            <option value="">Seleccionar...</option>
+            <option value="Factura venta">Factura de venta</option>
+            <option value="Factura venta consultoría">Factura venta consultoría</option>
+            <option value="Factura compra">Factura de compra</option>
+            <option value="Nota crédito">Nota crédito</option>
+            <option value="Nota débito">Nota débito</option>
+            <option value="Documento soporte">Documento soporte</option>
+            <option value="Activo fijo">Activo fijo</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Fuente<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="fuente">
+            <option value="FE">FE - Factura electrónica</option>
+            <option value="CE">CE - Comprobante de egreso</option>
+            <option value="CR">CR - Comprobante de recibo</option>
+            <option value="NC">NC - Nota de contabilidad</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Número de documento<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <input class="erp-input" type="text" name="documento" placeholder="Ej: FV-100" required>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Fecha del documento<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <input class="erp-input" type="date" name="fecha" required min="2025-01-01" max="2025-12-31">
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Fecha de vencimiento</label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="date" name="fecha_vencimiento" min="2025-01-01" max="2026-12-31">
+        </div>
+      </div>
+
+      <div class="erp-form-field span-2">
+        <label>Contraparte (cliente o proveedor)<span class="req">*</span></label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" name="contraparte_nombre" id="contraparte_nombre" placeholder="Escriba el nombre y selecciónelo del listado" required list="lista-contrapartes">
+          <a href="#" class="erp-btn-add" title="Buscar contraparte">+</a>
+        </div>
+        <datalist id="lista-contrapartes">
+          <% clientes.forEach(c => { %><option value="<%= c.razon_social %>" data-codigo="<%= c.codigo %>"><%= c.codigo %> — <%= c.razon_social %> (Cliente)</option><% }) %>
+          <% proveedores.forEach(p => { %><option value="<%= p.razon_social %>" data-codigo="<%= p.codigo %>"><%= p.codigo %> — <%= p.razon_social %> (Proveedor)</option><% }) %>
+        </datalist>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Sucursal</label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="sucursal">
+            <option value="principal">Sede principal — Barranquilla</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Orden de compra</label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" name="orden_compra" placeholder="Número de orden (opcional)">
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Forma de pago<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="forma_pago">
+            <option value="contado">Contado</option>
+            <option value="credito_30">Crédito 30 días</option>
+            <option value="credito_60">Crédito 60 días</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Método de pago<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="metodo_pago">
+            <option value="transferencia">Transferencia bancaria</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="cheque">Cheque</option>
+            <option value="tarjeta">Tarjeta débito/crédito</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Bodega</label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="bodega">
+            <option value="principal">Bodega principal</option>
+            <option value="ninguna">No aplica (servicios)</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Centro de costo</label>
+        <div class="erp-field-wrap">
+          <select class="erp-select" name="centro_costo">
+            <option value="">[Seleccione]</option>
+            <option value="administracion">Administración</option>
+            <option value="ventas">Ventas</option>
+            <option value="consultoria">Consultoría</option>
+            <option value="bodega">Bodega / Logística</option>
+          </select>
+          <a href="#" class="erp-btn-add" title="Nuevo centro de costo">+</a>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Cuenta contrapartida<span class="req">*</span></label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" name="cuenta_contrapartida" id="cuenta_contrapartida" placeholder="Ej: 130505 - CLIENTES NACIONALES" value="130505 - CLIENTES NACIONALES">
+          <a href="#" class="erp-btn-add" title="Buscar cuenta">+</a>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Tipo de operación<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="tipo_operacion">
+            <option value="estandar">Estándar</option>
+            <option value="exportacion">Exportación</option>
+            <option value="activo_fijo">Activo fijo</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Tipo de IVA<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="tipo_iva" id="tipo_iva">
+            <option value="gravado">Gravado (19%)</option>
+            <option value="exento">Exento (0%)</option>
+            <option value="excluido">Excluido</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Moneda<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="moneda">
+            <option value="COP">Peso colombiano COP</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Tasa de cambio</label>
+        <div class="erp-field-wrap">
+          <input class="erp-input text-right" type="number" name="tasa_cambio" value="0.00" step="0.01" min="0">
+        </div>
+      </div>
+
     </div>
-    <div class="form-group">
-      <label>Concepto</label>
-      <input type="text" name="concepto" placeholder="Descripción de la transacción" required>
+  </div>
+
+  <div class="erp-items-card">
+    <div class="erp-items-head">
+      <span>Ítems</span>
+      <button type="button" id="btn-agregar-linea" class="erp-btn erp-btn-green"><span class="erp-btn-icon">＋</span> Agregar línea</button>
     </div>
-    <div class="form-grid">
-      <div class="form-group">
-        <label>Subtotal (sin IVA)</label>
-        <input type="number" id="subtotal" name="subtotal" placeholder="0" min="0" required>
+    <div class="erp-items-table-wrap">
+      <table class="erp-items-table" id="tabla-items">
+        <thead>
+          <tr>
+            <th style="min-width:220px">Item<span style="color:#FFB3B3;">*</span></th>
+            <th class="c">Cantidad<span style="color:#FFB3B3;">*</span></th>
+            <th class="r">Vr Unit<span style="color:#FFB3B3;">*</span></th>
+            <th class="r">Descuento</th>
+            <th class="c">Impuesto<span style="color:#FFB3B3;">*</span></th>
+            <th class="r">Subtotal</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="items-body">
+          <!-- filas agregadas por JS -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5">Totales</td>
+            <td class="r" id="total-subtotal">0</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td colspan="5">IVA</td>
+            <td class="r" id="total-iva">0</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td colspan="5">Total transacción</td>
+            <td class="r" id="total-general">0</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Concepto general de la transacción (se guarda en backend) -->
+  <div class="erp-form-card">
+    <div class="erp-form-card-title">Concepto y retención</div>
+    <div class="erp-form-body">
+      <div class="erp-form-field span-2">
+        <label>Concepto<span class="req">*</span></label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" name="concepto" placeholder="Descripción general de la transacción" required>
+        </div>
       </div>
-      <div class="form-group">
-        <label>IVA</label>
-        <input type="number" id="iva" name="iva" placeholder="0" min="0">
+      <div class="erp-form-field">
+        <label>Retención (valor negativo en cartera)</label>
+        <div class="erp-field-wrap">
+          <input class="erp-input text-right" type="number" id="retencion" name="retencion" placeholder="0" value="0">
+        </div>
       </div>
-      <div class="form-group">
-        <label>Retención (valor negativo)</label>
-        <input type="number" id="retencion" name="retencion" placeholder="0">
-      </div>
-      <div class="form-group">
+      <div class="erp-form-field">
         <label>Total calculado</label>
-        <div id="total_calculado" style="padding:8px 12px;background:var(--gray);border-radius:6px;font-weight:600;font-size:14px;">$0</div>
+        <div class="erp-field-wrap">
+          <div id="total_calculado" style="padding:8px 12px;background:var(--gray);border-radius:6px;font-weight:600;font-size:14px;width:100%;">$0</div>
+        </div>
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:1rem;">
-      <button type="submit" class="btn btn-primary">Guardar transacción</button>
-      <a href="/transacciones" class="btn btn-secondary">Cancelar</a>
-    </div>
-  </form>
-</div>
+  </div>
+
+  <!-- Inputs ocultos que se envían al backend (compatibilidad con el modelo actual) -->
+  <input type="hidden" name="subtotal" id="subtotal_hidden" value="0">
+  <input type="hidden" name="iva" id="iva_hidden" value="0">
+
+  <div style="display:flex;gap:8px;margin-top:1rem;margin-bottom:2rem;">
+    <button type="submit" class="erp-btn erp-btn-blue"><span class="erp-btn-icon">💾</span> Guardar transacción</button>
+    <a href="/transacciones" class="erp-btn erp-btn-outline">Cancelar</a>
+  </div>
+</form>
+
+<script>
+(function() {
+  const tbody = document.getElementById('items-body');
+  const tipoIvaSelect = document.getElementById('tipo_iva');
+
+  function tarifaIva() {
+    const v = tipoIvaSelect.value;
+    if (v === 'gravado') return 0.19;
+    return 0; // exento / excluido
+  }
+
+  function nuevaFila() {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="erp-cell-input item-desc" placeholder="Escriba palabra clave y seleccione"></td>
+      <td class="c"><input type="number" class="erp-cell-input item-cant text-right" value="1" min="0" step="1"></td>
+      <td><input type="number" class="erp-cell-input item-valor text-right" value="0" min="0" step="1"></td>
+      <td><input type="number" class="erp-cell-input item-desc-pct text-right" value="0" min="0" max="100" step="0.01" title="Descuento %"></td>
+      <td class="c">
+        <select class="erp-cell-select item-impuesto">
+          <option value="19" ` + (tarifaIva()===0.19?'selected':'') + `>IVA 19%</option>
+          <option value="0" ` + (tarifaIva()===0?'selected':'') + `>0% (Exento/Excluido)</option>
+        </select>
+      </td>
+      <td class="r item-subtotal">0</td>
+      <td><button type="button" class="erp-row-remove" title="Eliminar línea">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+    tr.querySelectorAll('input,select').forEach(function(el) { el.addEventListener('input', recalcular); });
+    tr.querySelector('.erp-row-remove').addEventListener('click', function() { tr.remove(); recalcular(); });
+    recalcular();
+  }
+
+  function fmt(n) {
+    return Math.round(n).toLocaleString('es-CO');
+  }
+
+  function recalcular() {
+    let totalSubtotal = 0;
+    let totalIva = 0;
+    tbody.querySelectorAll('tr').forEach(function(tr) {
+      const cant = parseFloat(tr.querySelector('.item-cant').value) || 0;
+      const valor = parseFloat(tr.querySelector('.item-valor').value) || 0;
+      const descPct = parseFloat(tr.querySelector('.item-desc-pct').value) || 0;
+      const tarifaImp = parseFloat(tr.querySelector('.item-impuesto').value) || 0;
+      const bruto = cant * valor;
+      const descuento = bruto * (descPct / 100);
+      const subtotalLinea = bruto - descuento;
+      const ivaLinea = subtotalLinea * (tarifaImp / 100);
+      tr.querySelector('.item-subtotal').textContent = fmt(subtotalLinea);
+      totalSubtotal += subtotalLinea;
+      totalIva += ivaLinea;
+    });
+
+    const retencion = parseFloat(document.getElementById('retencion').value) || 0;
+    const totalGeneral = totalSubtotal + totalIva + retencion;
+
+    document.getElementById('total-subtotal').textContent = fmt(totalSubtotal);
+    document.getElementById('total-iva').textContent = fmt(totalIva);
+    document.getElementById('total-general').textContent = fmt(totalGeneral);
+    document.getElementById('total_calculado').textContent = '$' + fmt(totalGeneral);
+
+    document.getElementById('subtotal_hidden').value = Math.round(totalSubtotal);
+    document.getElementById('iva_hidden').value = Math.round(totalIva);
+  }
+
+  document.getElementById('btn-agregar-linea').addEventListener('click', nuevaFila);
+  document.getElementById('retencion').addEventListener('input', recalcular);
+  tipoIvaSelect.addEventListener('change', function() {
+    const tarifa = tarifaIva() * 100;
+    tbody.querySelectorAll('.item-impuesto').forEach(function(sel) { sel.value = tarifa; });
+    recalcular();
+  });
+
+  // Fila inicial
+  nuevaFila();
+})();
+</script>
+
 <%- include('../partials/footer') %>

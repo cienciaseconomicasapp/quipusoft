@@ -1,10 +1,5 @@
 <%- include('../partials/header') %>
-<div class="page-header">
-  <div>
-    <h2>Libros contables</h2>
-    <p>Inversiones Uniatlantico S.A.S. — NIT 900.123.456-7 — AG 2025</p>
-  </div>
-</div>
+<%- include('../partials/erp-header', { icon: '📚', title: 'Libros contables' }) %>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:1rem;">
 
@@ -36,6 +31,18 @@
     <div class="card-libro-icon">⚖️</div>
     <div class="card-libro-title">Balance de Comprobación</div>
     <div class="card-libro-sub">Sumas y saldos a una fecha</div>
+  </a>
+
+  <a href="/contabilidad/estado-situacion" class="card-libro">
+    <div class="card-libro-icon">🏦</div>
+    <div class="card-libro-title">Estado de Situación Financiera</div>
+    <div class="card-libro-sub">Activo, Pasivo y Patrimonio a una fecha</div>
+  </a>
+
+  <a href="/contabilidad/estado-resultados" class="card-libro">
+    <div class="card-libro-icon">📈</div>
+    <div class="card-libro-title">Estado de Resultado Integral</div>
+    <div class="card-libro-sub">Ingresos, costos y gastos del período</div>
   </a>
 
 </div>

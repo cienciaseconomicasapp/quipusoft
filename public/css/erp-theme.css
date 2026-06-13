@@ -1,0 +1,459 @@
+/* ============================================================
+   ERP THEME — Sistema visual compartido para módulos contables
+   (Plan de cuentas, Libros, Balance, Estados Financieros,
+   Transacciones y Facturación)
+   Inspirado en interfaces ERP contables tipo Siigo/Alegra.
+   ============================================================ */
+
+:root {
+  --erp-header-bg: #1F3864;
+  --erp-header-text: #ffffff;
+  --erp-panel-bg: #F4F5F7;
+  --erp-panel-border: #E1E4E9;
+  --erp-input-border: #CBD2DC;
+  --erp-input-focus: #2E75B6;
+  --erp-check-green: #1E8449;
+  --erp-label: #6C757D;
+  --erp-table-head-bg: #1F3864;
+  --erp-table-head-text: #ffffff;
+  --erp-row-alt: #F8FAFC;
+  --erp-row-hover: #EBF5FB;
+  --erp-totals-bg: #E8EAF6;
+  --erp-totals-border: #1F3864;
+  --erp-btn-primary: #2E75B6;
+  --erp-btn-primary-hover: #1F3864;
+  --erp-btn-success: #27AE60;
+  --erp-btn-success-hover: #1E8449;
+  --erp-btn-secondary: #6C757D;
+  --erp-debit: #1E5631;
+  --erp-credit: #7B0000;
+  --erp-radius: 8px;
+  --erp-radius-sm: 6px;
+}
+
+/* ============================================================
+   PAGE HEADER — encabezado de módulo (icono + título + empresa)
+   ============================================================ */
+.erp-page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--erp-panel-border);
+}
+.erp-page-head .erp-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+}
+.erp-page-head .erp-title .erp-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.erp-page-head .erp-company {
+  text-align: right;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.erp-page-head .erp-company strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+   TABS — pestañas tipo "Listado / Administración"
+   ============================================================ */
+.erp-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--erp-panel-border);
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.erp-tab {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.erp-tab:hover { color: var(--erp-btn-primary); }
+.erp-tab.active {
+  color: var(--erp-header-bg);
+  font-weight: 600;
+  border-bottom-color: var(--erp-header-bg);
+}
+
+/* ============================================================
+   PANEL "OPCIONES DE BÚSQUEDA" — filtros con fondo gris
+   ============================================================ */
+.erp-search-panel {
+  background: var(--erp-panel-bg);
+  border: 1px solid var(--erp-panel-border);
+  border-radius: var(--erp-radius);
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+}
+.erp-search-panel-title {
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--erp-label);
+  border-bottom: 1px solid var(--erp-panel-border);
+  background: #ECEDF1;
+}
+.erp-search-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.erp-search-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.erp-search-row.erp-row-split {
+  grid-template-columns: 140px 1fr 1fr;
+}
+.erp-search-row label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+.erp-search-row .erp-field-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+/* Inputs / selects estilo ERP con check verde */
+.erp-input, .erp-select {
+  width: 100%;
+  border: 1px solid var(--erp-input-border);
+  border-radius: var(--erp-radius-sm);
+  padding: 7px 32px 7px 10px;
+  font-size: 13px;
+  background: #fff;
+  color: var(--text);
+  transition: border-color 0.15s;
+}
+.erp-input:focus, .erp-select:focus {
+  outline: none;
+  border-color: var(--erp-input-focus);
+}
+.erp-field-wrap.valid .erp-input,
+.erp-field-wrap.valid .erp-select {
+  border-color: var(--erp-check-green);
+}
+.erp-field-wrap .erp-check {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--erp-check-green);
+  font-size: 13px;
+  font-weight: 700;
+  pointer-events: none;
+}
+.erp-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%236C757D' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 22px center;
+  padding-right: 40px;
+}
+.erp-field-wrap.valid .erp-select { padding-right: 40px; }
+
+/* Botón circular "+" para agregar/buscar (cliente, cuenta, etc.) */
+.erp-btn-add {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--erp-btn-secondary);
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.erp-btn-add:hover { background: var(--erp-header-bg); }
+
+/* ============================================================
+   BOTONES DE ACCIÓN — con icono, estilo ERP
+   ============================================================ */
+.erp-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 16px 16px;
+}
+.erp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: var(--erp-radius-sm);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+.erp-btn-blue { background: var(--erp-btn-primary); color: #fff; }
+.erp-btn-blue:hover { background: var(--erp-btn-primary-hover); }
+.erp-btn-teal { background: #17A2B8; color: #fff; }
+.erp-btn-teal:hover { background: #117A8B; }
+.erp-btn-green { background: var(--erp-btn-success); color: #fff; }
+.erp-btn-green:hover { background: var(--erp-btn-success-hover); }
+.erp-btn-outline { background: #fff; color: var(--erp-btn-primary); border: 1px solid var(--erp-btn-primary); }
+.erp-btn-outline:hover { background: var(--erp-row-hover); }
+.erp-btn-danger { background: #C0392B; color: #fff; }
+.erp-btn-danger:hover { background: #962D22; }
+.erp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.erp-btn .erp-btn-icon { font-size: 14px; line-height: 1; }
+
+/* ============================================================
+   FORM GRID — encabezados de factura/transacción
+   ============================================================ */
+.erp-form-card {
+  background: #fff;
+  border: 1px solid var(--erp-panel-border);
+  border-radius: var(--erp-radius);
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+}
+.erp-form-card-title {
+  padding: 10px 16px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--erp-label);
+  background: #ECEDF1;
+  border-bottom: 1px solid var(--erp-panel-border);
+}
+.erp-form-card-note {
+  padding: 10px 16px;
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--erp-panel-border);
+}
+.erp-form-card-note .req { color: #C0392B; font-weight: 700; }
+.erp-form-body {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 24px;
+}
+.erp-form-body.erp-form-full { grid-template-columns: 1fr; }
+.erp-form-field { display: flex; flex-direction: column; gap: 4px; }
+.erp-form-field.span-2 { grid-column: 1 / -1; }
+.erp-form-field label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+.erp-form-field label .req { color: #C0392B; }
+.erp-form-field .erp-field-wrap { display: flex; align-items: center; gap: 8px; }
+
+/* ============================================================
+   TABLA DE ÍTEMS / LÍNEAS — factura o asiento
+   ============================================================ */
+.erp-items-card {
+  background: #fff;
+  border: 1px solid var(--erp-panel-border);
+  border-radius: var(--erp-radius);
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+}
+.erp-items-head {
+  padding: 10px 16px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--erp-label);
+  background: #ECEDF1;
+  border-bottom: 1px solid var(--erp-panel-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.erp-items-table-wrap { overflow-x: auto; padding: 0 16px 16px; }
+.erp-items-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 760px; }
+.erp-items-table thead th {
+  background: var(--erp-table-head-bg);
+  color: var(--erp-table-head-text);
+  padding: 8px 10px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.erp-items-table thead th.r { text-align: right; }
+.erp-items-table thead th.c { text-align: center; }
+.erp-items-table thead th u { text-decoration: underline; }
+.erp-items-table tbody td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #F0F0F0;
+  vertical-align: middle;
+}
+.erp-items-table tbody tr:nth-child(even) td { background: var(--erp-row-alt); }
+.erp-items-table tbody tr:hover td { background: var(--erp-row-hover); }
+.erp-items-table tbody td.r { text-align: right; font-variant-numeric: tabular-nums; }
+.erp-items-table tbody td.c { text-align: center; }
+.erp-items-table tfoot td {
+  background: var(--erp-totals-bg);
+  font-weight: 700;
+  padding: 8px 10px;
+  border-top: 2px solid var(--erp-totals-border);
+  white-space: nowrap;
+}
+.erp-items-table tfoot td.r { text-align: right; }
+.erp-items-table .erp-cell-input,
+.erp-items-table .erp-cell-select {
+  width: 100%;
+  border: 1px solid var(--erp-input-border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 12.5px;
+  background: #fff;
+}
+.erp-items-table .erp-cell-input:focus,
+.erp-items-table .erp-cell-select:focus { outline: none; border-color: var(--erp-input-focus); }
+.erp-items-table .erp-cell-input.text-right { text-align: right; }
+.erp-items-table .erp-cell-search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.erp-row-remove {
+  background: #C0392B;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+}
+.erp-row-remove:hover { background: #962D22; }
+
+/* ============================================================
+   LIBROS — secciones por comprobante / cuenta (libro diario, auxiliar)
+   ============================================================ */
+.erp-book-section { margin-bottom: 1.5rem; }
+.erp-book-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid var(--erp-header-bg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.erp-book-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.erp-book-table thead th {
+  background: var(--erp-table-head-bg);
+  color: var(--erp-table-head-text);
+  padding: 7px 10px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.erp-book-table thead th.r { text-align: right; }
+.erp-book-table tbody td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #F0F0F0;
+}
+.erp-book-table tbody tr:nth-child(even) td { background: var(--erp-row-alt); }
+.erp-book-table tbody tr:hover td { background: var(--erp-row-hover); }
+.erp-book-table tbody td.r { text-align: right; font-variant-numeric: tabular-nums; }
+.erp-book-table tbody tr.erp-row-saldo-anterior td { font-style: italic; color: var(--muted); }
+.erp-book-table tfoot td {
+  background: var(--erp-totals-bg);
+  font-weight: 700;
+  padding: 7px 10px;
+  border-top: 2px solid var(--erp-totals-border);
+}
+.erp-book-table tfoot td.r { text-align: right; }
+.erp-amount-debit { color: var(--erp-debit); }
+.erp-amount-credit { color: var(--erp-credit); }
+
+/* Jerarquía visual del plan de cuentas / balance / estados financieros */
+.erp-level-1 td { background: #E8EAF6; font-weight: 700; font-size: 13.5px; }
+.erp-level-2 td { background: #EBF5FB; font-weight: 600; }
+.erp-level-3 td { background: #fff; }
+.erp-level-4 td { background: #FAFAFA; font-size: 12px; color: var(--muted); }
+
+/* Badge naturaleza */
+.erp-badge-nat {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  display: inline-block;
+}
+.erp-badge-nat.deb { background: var(--erp-row-alt); color: var(--erp-debit); }
+.erp-badge-nat.cred { background: #FADBD8; color: var(--erp-credit); }
+
+/* ============================================================
+   BARRA DE TOTALES / RESUMEN
+   ============================================================ */
+.erp-totales-bar {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+  background: var(--erp-totals-bg);
+  border: 1px solid var(--erp-panel-border);
+  border-radius: var(--erp-radius);
+  padding: 10px 16px;
+  margin-bottom: 1.25rem;
+  font-size: 13px;
+}
+.erp-totales-bar strong { font-variant-numeric: tabular-nums; }
+.erp-totales-bar .equilibrado { color: var(--erp-check-green); font-weight: 700; }
+.erp-totales-bar .desequilibrado { color: #C0392B; font-weight: 700; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 800px) {
+  .erp-form-body { grid-template-columns: 1fr; }
+  .erp-search-row, .erp-search-row.erp-row-split { grid-template-columns: 1fr; }
+  .erp-page-head { flex-direction: column; }
+  .erp-page-head .erp-company { text-align: left; }
+}

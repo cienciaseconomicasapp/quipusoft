@@ -1,0 +1,132 @@
+<%- include('../partials/header') %>
+<%- include('../partials/erp-header', {
+  icon: '📊', title: 'Estados financieros',
+  tabs: [
+    { label: 'Balance de prueba', href: '/contabilidad/balance-comprobacion', active: false },
+    { label: 'Estado de situación financiera', href: '/contabilidad/estado-situacion', active: false },
+    { label: 'Estado de resultado integral', href: '/contabilidad/estado-resultados', active: true },
+  ]
+}) %>
+
+<div class="erp-search-panel">
+  <div class="erp-search-panel-title">Opciones de búsqueda</div>
+  <form method="GET" action="/contabilidad/estado-resultados">
+    <div class="erp-search-body">
+      <div class="erp-search-row erp-row-split">
+        <label>Período</label>
+        <div class="erp-field-wrap valid">
+          <input class="erp-input" type="date" name="desde" value="<%= fechaDesde %>">
+          <span class="erp-check">✓</span>
+        </div>
+        <div class="erp-field-wrap valid">
+          <input class="erp-input" type="date" name="hasta" value="<%= fechaHasta %>">
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+    </div>
+    <div class="erp-actions">
+      <button type="submit" class="erp-btn erp-btn-blue"><span class="erp-btn-icon">🔎</span> Mostrar estado de resultado</button>
+      <button type="button" onclick="window.print()" class="erp-btn erp-btn-teal"><span class="erp-btn-icon">🖨</span> Imprimir estado de resultado</button>
+    </div>
+  </form>
+</div>
+
+<div class="erp-totales-bar">
+  <span>Ingresos: <strong class="erp-amount-credit"><%= totalIngresos.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
+  <span>Costos: <strong class="erp-amount-debit"><%= totalCostos.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
+  <span>Gastos: <strong class="erp-amount-debit"><%= totalGastos.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
+  <span class="<%= resultadoEjercicio >= 0 ? 'equilibrado' : 'desequilibrado' %>">
+    <%= resultadoEjercicio >= 0 ? '✅ Utilidad del ejercicio' : '⚠ Pérdida del ejercicio' %>:
+    <%= Math.abs(resultadoEjercicio).toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+  </span>
+</div>
+
+<%
+  const nivelClass = { clase: 'erp-level-1', grupo: 'erp-level-2', cuenta: 'erp-level-3', subcuenta: 'erp-level-4' };
+  const ingresos = cuentas.filter(c => c.codigo.startsWith('4'));
+  const costos   = cuentas.filter(c => c.codigo.startsWith('6'));
+  const gastos   = cuentas.filter(c => c.codigo.startsWith('5'));
+  const periodoTexto = 'De ' + new Date(fechaDesde).toLocaleDateString('es-CO',{month:'long',year:'numeric'}) + ' a ' + new Date(fechaHasta).toLocaleDateString('es-CO',{month:'long',year:'numeric'});
+%>
+
+<!-- INGRESOS -->
+<div class="erp-book-section">
+  <div class="erp-book-section-title">INGRESOS — <%= periodoTexto %></div>
+  <table class="erp-book-table">
+    <thead><tr><th style="width:90px">Código</th><th>Cuenta</th><th class="r" style="width:170px">Valor</th></tr></thead>
+    <tbody>
+    <% if (ingresos.length === 0) { %>
+      <tr><td colspan="3" style="color:var(--muted);font-style:italic;">Sin movimientos en el período</td></tr>
+    <% } %>
+    <% ingresos.forEach(c => { %>
+      <tr class="<%= nivelClass[c.tipo] || '' %>">
+        <td><code style="font-size:11px"><%= c.codigo %></code></td>
+        <td style="padding-left:<%= 10 + Math.max(0,(c.codigo.length - 1)) * 12 %>px"><%= c.nombre %></td>
+        <td class="r"><%= Math.abs(Number(c.saldo)).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="2">TOTAL INGRESOS</td><td class="r"><%= totalIngresos.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td></tr>
+    </tfoot>
+  </table>
+</div>
+
+<!-- COSTOS -->
+<div class="erp-book-section">
+  <div class="erp-book-section-title">COSTOS DE VENTA — <%= periodoTexto %></div>
+  <table class="erp-book-table">
+    <thead><tr><th style="width:90px">Código</th><th>Cuenta</th><th class="r" style="width:170px">Valor</th></tr></thead>
+    <tbody>
+    <% if (costos.length === 0) { %>
+      <tr><td colspan="3" style="color:var(--muted);font-style:italic;">Sin movimientos en el período</td></tr>
+    <% } %>
+    <% costos.forEach(c => { %>
+      <tr class="<%= nivelClass[c.tipo] || '' %>">
+        <td><code style="font-size:11px"><%= c.codigo %></code></td>
+        <td style="padding-left:<%= 10 + Math.max(0,(c.codigo.length - 1)) * 12 %>px"><%= c.nombre %></td>
+        <td class="r"><%= Math.abs(Number(c.saldo)).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="2">TOTAL COSTOS</td><td class="r"><%= totalCostos.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td></tr>
+    </tfoot>
+  </table>
+</div>
+
+<!-- GASTOS -->
+<div class="erp-book-section">
+  <div class="erp-book-section-title">GASTOS OPERACIONALES — <%= periodoTexto %></div>
+  <table class="erp-book-table">
+    <thead><tr><th style="width:90px">Código</th><th>Cuenta</th><th class="r" style="width:170px">Valor</th></tr></thead>
+    <tbody>
+    <% if (gastos.length === 0) { %>
+      <tr><td colspan="3" style="color:var(--muted);font-style:italic;">Sin movimientos en el período</td></tr>
+    <% } %>
+    <% gastos.forEach(c => { %>
+      <tr class="<%= nivelClass[c.tipo] || '' %>">
+        <td><code style="font-size:11px"><%= c.codigo %></code></td>
+        <td style="padding-left:<%= 10 + Math.max(0,(c.codigo.length - 1)) * 12 %>px"><%= c.nombre %></td>
+        <td class="r"><%= Math.abs(Number(c.saldo)).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="2">TOTAL GASTOS</td><td class="r"><%= totalGastos.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td></tr>
+    </tfoot>
+  </table>
+</div>
+
+<!-- RESULTADO DEL EJERCICIO -->
+<div class="erp-totales-bar" style="background:var(--erp-header-bg);color:#fff;font-size:14px;">
+  <span><%= resultadoEjercicio >= 0 ? 'RESULTADO DEL EJERCICIO (UTILIDAD)' : 'RESULTADO DEL EJERCICIO (PÉRDIDA)' %>:
+    <strong><%= Math.abs(resultadoEjercicio).toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong>
+  </span>
+  <span style="font-size:12px;opacity:.85;">Ingresos (<%= totalIngresos.toLocaleString('es-CO') %>) − Costos (<%= totalCostos.toLocaleString('es-CO') %>) − Gastos (<%= totalGastos.toLocaleString('es-CO') %>)</span>
+</div>
+
+<style>
+@media print { .erp-search-panel, .erp-actions, nav, .erp-tabs { display:none; } }
+</style>
+<%- include('../partials/footer') %>

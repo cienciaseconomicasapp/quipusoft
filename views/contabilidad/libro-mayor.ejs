@@ -1,84 +1,123 @@
 <%- include('../partials/header') %>
-<div class="page-header">
-  <div><h2>Libro Mayor</h2><p>Inversiones Uniatlantico S.A.S. — AG 2025</p></div>
-  <a href="/contabilidad" class="btn btn-secondary">← Libros</a>
+<%- include('../partials/erp-header', {
+  icon: '📗', title: 'Libro Mayor',
+  tabs: [
+    { label: 'Libro mayor', href: '/contabilidad/libro-mayor', active: true },
+    { label: 'Libro diario', href: '/contabilidad/libro-diario', active: false },
+  ]
+}) %>
+
+<div class="erp-search-panel">
+  <div class="erp-search-panel-title">Opciones de búsqueda</div>
+  <form method="GET" action="/contabilidad/libro-mayor">
+    <div class="erp-search-body">
+      <div class="erp-search-row erp-row-split">
+        <label>Fechas</label>
+        <div class="erp-field-wrap valid">
+          <input class="erp-input" type="date" name="desde" value="<%= fechaDesde %>">
+          <span class="erp-check">✓</span>
+        </div>
+        <div class="erp-field-wrap valid">
+          <input class="erp-input" type="date" name="hasta" value="<%= fechaHasta %>">
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+      <div class="erp-search-row">
+        <label>Filtrar cuentas (prefijo)</label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" name="cuenta" value="<%= cuentaFiltro %>" placeholder="Ej: 11, 4135, 5105... (opcional)">
+        </div>
+      </div>
+    </div>
+    <div class="erp-actions">
+      <button type="submit" class="erp-btn erp-btn-blue"><span class="erp-btn-icon">🔎</span> Mostrar libro mayor</button>
+      <button type="button" onclick="window.print()" class="erp-btn erp-btn-teal"><span class="erp-btn-icon">🖨</span> Imprimir libro mayor</button>
+    </div>
+  </form>
 </div>
 
-<form method="GET" action="/contabilidad/libro-mayor" class="filtros-form">
-  <div class="filtros-row">
-    <div class="filtro-grupo"><label>Desde</label><input type="date" name="desde" value="<%= fechaDesde %>"></div>
-    <div class="filtro-grupo"><label>Hasta</label><input type="date" name="hasta" value="<%= fechaHasta %>"></div>
-    <div class="filtro-grupo" style="flex:2"><label>Filtrar cuentas (prefijo)</label><input type="text" name="cuenta" value="<%= cuentaFiltro %>" placeholder="Ej: 11, 4135, 5105..."></div>
-    <div class="filtro-grupo" style="align-self:flex-end"><button type="submit" class="btn btn-primary">Consultar</button></div>
-    <div class="filtro-grupo" style="align-self:flex-end"><button type="button" onclick="window.print()" class="btn btn-secondary">🖨 Imprimir</button></div>
-  </div>
-</form>
+<% if(mayor.length === 0){ %>
+  <div class="erp-totales-bar">No hay movimientos para el período y filtro seleccionados.</div>
+<% } else { %>
 
-<% mayor.forEach(c => { %>
-<div class="mayor-card">
-  <div class="mayor-header">
-    <div>
-      <code class="cuenta-cod"><%= c.codigo %></code>
-      <span class="cuenta-nom"><%= c.nombre %></span>
-      <span class="nat-badge <%= c.naturaleza === 'D' ? 'deb' : 'cred' %>">Naturaleza <%= c.naturaleza === 'D' ? 'Débito' : 'Crédito' %></span>
-    </div>
-    <div class="mayor-totales">
-      <span>Total D: <strong style="color:#7D4900">$<%= c.totDebito.toLocaleString('es-CO') %></strong></span>
-      <span>Total C: <strong style="color:#1E5631">$<%= c.totCredito.toLocaleString('es-CO') %></strong></span>
-      <span class="saldo-final">Saldo: <strong>$<%= Math.abs(c.saldo).toLocaleString('es-CO') %> <%= c.saldo >= 0 ? 'D' : 'C' %></strong></span>
-    </div>
+<!-- RESUMEN GENERAL -->
+<div class="erp-book-section">
+  <div class="erp-book-section-title">Resumen de saldos por cuenta</div>
+  <div class="erp-items-table-wrap" style="padding:0;">
+  <table class="erp-book-table">
+    <thead><tr>
+      <th style="width:90px">Código</th>
+      <th>Nombre cuenta</th>
+      <th class="c" style="width:90px">Naturaleza</th>
+      <th class="r">Movimientos débito</th>
+      <th class="r">Movimientos crédito</th>
+      <th class="r">Saldo</th>
+    </tr></thead>
+    <tbody>
+    <% mayor.forEach(c => { %>
+      <tr>
+        <td><a href="#cuenta-<%= c.codigo %>"><code><%= c.codigo %></code></a></td>
+        <td><%= c.nombre %></td>
+        <td class="c">
+          <span class="erp-badge-nat <%= c.naturaleza === 'D' ? 'deb' : 'cred' %>">
+            <%= c.naturaleza === 'D' ? 'Débito' : 'Crédito' %>
+          </span>
+        </td>
+        <td class="r erp-amount-debit"><%= c.totDebito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r erp-amount-credit"><%= c.totCredito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r"><strong><%= Math.abs(c.saldo).toLocaleString('es-CO',{minimumFractionDigits:2}) %> <%= c.saldo >= 0 ? 'D' : 'C' %></strong></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table>
   </div>
-  <table class="detalle-tabla">
+</div>
+
+<!-- DETALLE POR CUENTA -->
+<% mayor.forEach(c => { %>
+<div class="erp-book-section" id="cuenta-<%= c.codigo %>">
+  <div class="erp-book-section-title">
+    <code><%= c.codigo %></code> <%= c.nombre %>
+    <span class="erp-badge-nat <%= c.naturaleza === 'D' ? 'deb' : 'cred' %>">
+      Naturaleza <%= c.naturaleza === 'D' ? 'Débito' : 'Crédito' %>
+    </span>
+    <span style="font-weight:400;font-size:12.5px;color:var(--muted);">
+      — Saldo: <strong style="color:var(--text);"><%= Math.abs(c.saldo).toLocaleString('es-CO',{minimumFractionDigits:2}) %> <%= c.saldo >= 0 ? 'D' : 'C' %></strong>
+    </span>
+  </div>
+  <table class="erp-book-table">
     <thead><tr>
       <th style="width:90px">Fecha</th>
-      <th style="width:110px">Comprobante</th>
+      <th style="width:120px">Comprobante</th>
       <th>Concepto / Contraparte</th>
-      <th style="width:130px;text-align:right">Débito</th>
-      <th style="width:130px;text-align:right">Crédito</th>
+      <th class="r" style="width:140px">Débito</th>
+      <th class="r" style="width:140px">Crédito</th>
     </tr></thead>
     <tbody>
     <% c.movimientos.forEach(m => { %>
       <tr>
         <td><%= new Date(m.fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'2-digit'}) %></td>
         <td><code style="font-size:11px"><%= m.numero_comprobante %></code></td>
-        <td style="font-size:12px"><%= m.descripcion || m.concepto %><% if(m.contraparte){ %> <span style="color:#888">— <%= m.contraparte %></span><% } %></td>
-        <td style="text-align:right;color:<%= m.debito > 0 ? '#7D4900' : '#ccc' %>"><%= m.debito > 0 ? '$' + Number(m.debito).toLocaleString('es-CO') : '—' %></td>
-        <td style="text-align:right;color:<%= m.credito > 0 ? '#1E5631' : '#ccc' %>"><%= m.credito > 0 ? '$' + Number(m.credito).toLocaleString('es-CO') : '—' %></td>
+        <td><%= m.descripcion || m.concepto %><% if(m.contraparte){ %> <span style="color:var(--muted);">— <%= m.contraparte %></span><% } %></td>
+        <td class="r <%= m.debito > 0 ? 'erp-amount-debit' : '' %>"><%= m.debito > 0 ? Number(m.debito).toLocaleString('es-CO',{minimumFractionDigits:2}) : '0.00' %></td>
+        <td class="r <%= m.credito > 0 ? 'erp-amount-credit' : '' %>"><%= m.credito > 0 ? Number(m.credito).toLocaleString('es-CO',{minimumFractionDigits:2}) : '0.00' %></td>
       </tr>
     <% }) %>
-      <tr class="fila-total">
-        <td colspan="3" style="text-align:right;font-weight:600;font-size:12px">TOTALES:</td>
-        <td style="text-align:right;font-weight:700;color:#7D4900">$<%= c.totDebito.toLocaleString('es-CO') %></td>
-        <td style="text-align:right;font-weight:700;color:#1E5631">$<%= c.totCredito.toLocaleString('es-CO') %></td>
-      </tr>
     </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3">Totales</td>
+        <td class="r"><%= c.totDebito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r"><%= c.totCredito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      </tr>
+    </tfoot>
   </table>
 </div>
 <% }) %>
 
-<% if(mayor.length === 0){ %>
-<div class="tip-box">No hay movimientos para el período y filtro seleccionados.</div>
 <% } %>
 
 <style>
-.filtros-form { background:#f5f7fa;border:1px solid #ddd;border-radius:8px;padding:12px 16px;margin-bottom:1rem; }
-.filtros-row { display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start; }
-.filtro-grupo { display:flex;flex-direction:column;gap:4px;min-width:130px; }
-.filtro-grupo label { font-size:12px;color:#555;font-weight:500; }
-.filtro-grupo input { border:1px solid #ccc;border-radius:6px;padding:6px 10px;font-size:13px; }
-.mayor-card { border:1px solid #ddd;border-radius:8px;margin-bottom:16px;overflow:hidden; }
-.mayor-header { background:#f0f4f8;padding:10px 14px;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px; }
-.cuenta-cod { font-size:14px;font-weight:700;color:#1F3864;margin-right:8px; }
-.cuenta-nom { font-size:13px;font-weight:600; }
-.nat-badge { font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px; }
-.nat-badge.deb { background:#FDE8D8;color:#7D4900; }
-.nat-badge.cred { background:#D5E8D4;color:#1E5631; }
-.mayor-totales { display:flex;gap:16px;font-size:13px; }
-.saldo-final { font-weight:700;color:#1F3864; }
-.detalle-tabla { width:100%;border-collapse:collapse;font-size:13px; }
-.detalle-tabla th { background:#1F3864;color:#fff;padding:6px 10px; }
-.detalle-tabla td { padding:5px 10px;border-bottom:1px solid #f0f0f0; }
-.fila-total td { background:#f0f0f0;border-top:2px solid #ddd; }
-@media print { .filtros-form,.btn,nav,.page-header a { display:none; } }
+@media print { .erp-search-panel, .erp-actions, nav, .erp-tabs { display:none; } }
 </style>
 <%- include('../partials/footer') %>

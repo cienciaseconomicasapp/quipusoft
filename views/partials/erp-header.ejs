@@ -1,0 +1,21 @@
+<%
+// Uso: include erp-header con { icon, title, tabs }
+// tabs (opcional): array de objetos con label, href, active
+%>
+<div class="erp-page-head">
+  <div class="erp-title">
+    <span class="erp-icon"><%= icon || '📄' %></span>
+    <span><%= title %></span>
+  </div>
+  <div class="erp-company">
+    <strong>INVERSIONES UNIATLÁNTICO S.A.S.</strong>
+    <%= user && user.nombre ? user.nombre : '' %>
+  </div>
+</div>
+<% if (typeof tabs !== 'undefined' && tabs && tabs.length) { %>
+<div class="erp-tabs">
+  <% tabs.forEach(t => { %>
+    <a href="<%= t.href %>" class="erp-tab <%= t.active ? 'active' : '' %>"><%= t.label %></a>
+  <% }) %>
+</div>
+<% } %>

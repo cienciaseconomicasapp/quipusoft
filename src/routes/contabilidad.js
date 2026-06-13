@@ -304,6 +304,135 @@ router.get('/balance-comprobacion', requireAuth, async (req, res) => {
   }
 });
 
+// ── GET /contabilidad/estado-situacion — Estado de Situación Financiera ────
+router.get('/estado-situacion', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  const { hasta } = req.query;
+  const fechaHasta = hasta || '2025-12-31';
+
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        pc.codigo, pc.nombre, pc.naturaleza, pc.tipo,
+        CASE WHEN pc.naturaleza = 'D'
+          THEN COALESCE(SUM(ad.debito),0) - COALESCE(SUM(ad.credito),0)
+          ELSE COALESCE(SUM(ad.credito),0) - COALESCE(SUM(ad.debito),0)
+        END AS saldo
+      FROM ${s}.plan_cuentas pc
+      LEFT JOIN ${s}.asientos_detalle ad ON ad.cuenta_codigo = pc.codigo
+      LEFT JOIN ${s}.asientos a ON a.id = ad.asiento_id AND a.fecha <= $1
+      WHERE pc.codigo ~ '^[123]'
+      GROUP BY pc.codigo, pc.nombre, pc.naturaleza, pc.tipo
+      HAVING COALESCE(SUM(ad.debito),0) > 0 OR COALESCE(SUM(ad.credito),0) > 0
+      ORDER BY pc.codigo
+    `, [fechaHasta]);
+
+    // Calcular utilidad/pérdida del ejercicio (ingresos - gastos - costos), AG completo hasta fechaHasta
+    const { rows: resultRows } = await pool.query(`
+      SELECT pc.codigo,
+        CASE WHEN pc.naturaleza = 'D'
+          THEN COALESCE(SUM(ad.debito),0) - COALESCE(SUM(ad.credito),0)
+          ELSE COALESCE(SUM(ad.credito),0) - COALESCE(SUM(ad.debito),0)
+        END AS saldo
+      FROM ${s}.plan_cuentas pc
+      LEFT JOIN ${s}.asientos_detalle ad ON ad.cuenta_codigo = pc.codigo
+      LEFT JOIN ${s}.asientos a ON a.id = ad.asiento_id AND a.fecha <= $1
+      WHERE pc.codigo ~ '^[456]'
+      GROUP BY pc.codigo, pc.naturaleza
+    `, [fechaHasta]);
+
+    let ingresos = 0, gastosCostos = 0;
+    for (const r of resultRows) {
+      const saldo = Number(r.saldo);
+      if (r.codigo.startsWith('4')) ingresos += saldo;
+      else gastosCostos += saldo;
+    }
+    const utilidadEjercicio = ingresos - gastosCostos;
+
+    // Totales por clase
+    let totalActivo = 0, totalPasivo = 0, totalPatrimonio = 0;
+    for (const c of rows) {
+      const saldo = Number(c.saldo);
+      if (c.codigo.startsWith('1')) totalActivo += saldo;
+      else if (c.codigo.startsWith('2')) totalPasivo += saldo;
+      else if (c.codigo.startsWith('3')) totalPatrimonio += saldo;
+    }
+    totalPatrimonio += utilidadEjercicio;
+    const totalPasivoPatrimonio = totalPasivo + totalPatrimonio;
+
+    res.render('contabilidad/estado-situacion', {
+      title: 'Estado de Situación Financiera — Quipusoft',
+      user: req.user,
+      cuentas: rows,
+      fechaHasta,
+      totalActivo,
+      totalPasivo,
+      totalPatrimonio,
+      totalPasivoPatrimonio,
+      utilidadEjercicio,
+      error: req.flash('error'),
+      success: req.flash('success'),
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Error: ' + e.message);
+    res.redirect('/contabilidad');
+  }
+});
+
+// ── GET /contabilidad/estado-resultados — Estado de Resultado Integral ─────
+router.get('/estado-resultados', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  const { desde, hasta } = req.query;
+  const fechaDesde = desde || '2025-01-01';
+  const fechaHasta = hasta || '2025-12-31';
+
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        pc.codigo, pc.nombre, pc.naturaleza, pc.tipo,
+        CASE WHEN pc.naturaleza = 'D'
+          THEN COALESCE(SUM(ad.debito),0) - COALESCE(SUM(ad.credito),0)
+          ELSE COALESCE(SUM(ad.credito),0) - COALESCE(SUM(ad.debito),0)
+        END AS saldo
+      FROM ${s}.plan_cuentas pc
+      LEFT JOIN ${s}.asientos_detalle ad ON ad.cuenta_codigo = pc.codigo
+      LEFT JOIN ${s}.asientos a ON a.id = ad.asiento_id AND a.fecha BETWEEN $1 AND $2
+      WHERE pc.codigo ~ '^[456]'
+      GROUP BY pc.codigo, pc.nombre, pc.naturaleza, pc.tipo
+      HAVING COALESCE(SUM(ad.debito),0) > 0 OR COALESCE(SUM(ad.credito),0) > 0
+      ORDER BY pc.codigo
+    `, [fechaDesde, fechaHasta]);
+
+    let totalIngresos = 0, totalGastos = 0, totalCostos = 0;
+    for (const c of rows) {
+      const saldo = Number(c.saldo);
+      if (c.codigo.startsWith('4')) totalIngresos += saldo;
+      else if (c.codigo.startsWith('5')) totalGastos += saldo;
+      else if (c.codigo.startsWith('6')) totalCostos += saldo;
+    }
+    const resultadoEjercicio = totalIngresos - totalGastos - totalCostos;
+
+    res.render('contabilidad/estado-resultados', {
+      title: 'Estado de Resultado Integral — Quipusoft',
+      user: req.user,
+      cuentas: rows,
+      fechaDesde,
+      fechaHasta,
+      totalIngresos,
+      totalGastos,
+      totalCostos,
+      resultadoEjercicio,
+      error: req.flash('error'),
+      success: req.flash('success'),
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Error: ' + e.message);
+    res.redirect('/contabilidad');
+  }
+});
+
 // ── GET /contabilidad/ajuste/:asientoId — formulario de ajuste ──────────────
 router.get('/ajuste/:asientoId', requireAuth, async (req, res) => {
   const s = schema(req.user.id);

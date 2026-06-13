@@ -1,88 +1,91 @@
 <%- include('../partials/header') %>
-<div class="page-header">
-  <div><h2>Balance de Comprobación</h2><p>Inversiones Uniatlantico S.A.S. — AG 2025</p></div>
-  <a href="/contabilidad" class="btn btn-secondary">← Libros</a>
+<%- include('../partials/erp-header', {
+  icon: '📊', title: 'Estados financieros',
+  tabs: [
+    { label: 'Balance de prueba', href: '/contabilidad/balance-comprobacion', active: true },
+    { label: 'Estado de situación financiera', href: '/contabilidad/estado-situacion', active: false },
+    { label: 'Estado de resultado integral', href: '/contabilidad/estado-resultados', active: false },
+  ]
+}) %>
+
+<div class="erp-search-panel">
+  <div class="erp-search-panel-title">Opciones de búsqueda</div>
+  <form method="GET" action="/contabilidad/balance-comprobacion">
+    <div class="erp-search-body">
+      <div class="erp-search-row">
+        <label>Corte a fecha</label>
+        <div class="erp-field-wrap valid">
+          <input class="erp-input" type="date" name="hasta" value="<%= fechaHasta %>">
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+    </div>
+    <div class="erp-actions">
+      <button type="submit" class="erp-btn erp-btn-blue"><span class="erp-btn-icon">⚙</span> Mostrar balance de prueba</button>
+      <button type="button" onclick="window.print()" class="erp-btn erp-btn-teal"><span class="erp-btn-icon">🖨</span> Imprimir balance de prueba</button>
+    </div>
+  </form>
 </div>
 
-<form method="GET" action="/contabilidad/balance-comprobacion" class="filtros-form">
-  <div class="filtros-row">
-    <div class="filtro-grupo"><label>Corte a fecha</label><input type="date" name="hasta" value="<%= fechaHasta %>"></div>
-    <div class="filtro-grupo" style="align-self:flex-end"><button type="submit" class="btn btn-primary">Consultar</button></div>
-    <div class="filtro-grupo" style="align-self:flex-end"><button type="button" onclick="window.print()" class="btn btn-secondary">🖨 Imprimir</button></div>
-  </div>
-</form>
-
-<div class="totales-bar">
-  <span>Suma débitos: <strong style="color:#7D4900">$<%= totales.debito.toLocaleString('es-CO') %></strong></span>
-  <span>Suma créditos: <strong style="color:#1E5631">$<%= totales.credito.toLocaleString('es-CO') %></strong></span>
+<div class="erp-totales-bar">
+  <span>Suma débitos: <strong class="erp-amount-debit"><%= totales.debito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
+  <span>Suma créditos: <strong class="erp-amount-credit"><%= totales.credito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
   <span class="<%= Math.abs(totales.debito - totales.credito) < 1 ? 'equilibrado' : 'desequilibrado' %>">
     <%= Math.abs(totales.debito - totales.credito) < 1 ? '✅ Partida doble cuadra' : '⚠ Diferencia: $' + Math.abs(totales.debito - totales.credito).toLocaleString('es-CO') %>
   </span>
 </div>
 
-<table class="tabla-balance" style="margin-top:1rem;">
+<div class="erp-items-table-wrap" style="padding:0;">
+<table class="erp-book-table">
   <thead>
     <tr>
       <th style="width:90px">Código</th>
       <th>Nombre de la cuenta</th>
-      <th style="width:60px">Nat.</th>
-      <th style="width:140px;text-align:right">Total débitos</th>
-      <th style="width:140px;text-align:right">Total créditos</th>
-      <th style="width:140px;text-align:right">Saldo</th>
+      <th class="c" style="width:70px">Nat.</th>
+      <th class="r" style="width:150px">Movimientos débito</th>
+      <th class="r" style="width:150px">Movimientos crédito</th>
+      <th class="r" style="width:150px">Saldo final</th>
     </tr>
   </thead>
   <tbody>
   <% let claseActual = ''; %>
+  <% const nivelClass = { clase: 'erp-level-1', grupo: 'erp-level-2', cuenta: 'erp-level-3', subcuenta: 'erp-level-4' }; %>
   <% cuentas.forEach(c => { %>
     <% const claseNueva = c.codigo.substring(0,1); %>
     <% if(claseNueva !== claseActual){ claseActual = claseNueva; %>
-    <tr class="fila-clase">
-      <td colspan="6">
+    <tr>
+      <td colspan="6" style="background:var(--erp-header-bg);color:#fff;font-weight:700;font-size:12px;letter-spacing:.05em;padding:6px 10px;">
         <% const nombreClase = {1:'ACTIVO',2:'PASIVO',3:'PATRIMONIO',4:'INGRESOS',5:'GASTOS',6:'COSTOS'}[claseNueva] || 'CLASE ' + claseNueva; %>
         CLASE <%= claseNueva %> — <%= nombreClase %>
       </td>
     </tr>
     <% } %>
-    <tr class="nivel-<%= c.tipo %>">
+    <tr class="<%= nivelClass[c.tipo] || '' %>">
       <td><code style="font-size:11px"><%= c.codigo %></code></td>
-      <td style="padding-left:<%= Math.max(0,(c.codigo.length - 2)) * 8 %>px;font-size:12px"><%= c.nombre %></td>
-      <td style="text-align:center;font-size:11px"><span class="nat-badge <%= c.naturaleza==='D'?'deb':'cred' %>"><%= c.naturaleza %></span></td>
-      <td style="text-align:right;color:#7D4900">$<%= Number(c.total_debito).toLocaleString('es-CO') %></td>
-      <td style="text-align:right;color:#1E5631">$<%= Number(c.total_credito).toLocaleString('es-CO') %></td>
-      <td style="text-align:right;font-weight:<%= c.tipo==='subcuenta'?'600':'400' %>;color:<%= c.saldo >= 0 ? '#1F3864' : '#C0392B' %>">
-        $<%= Math.abs(c.saldo).toLocaleString('es-CO') %> <%= c.saldo >= 0 ? 'D' : 'C' %>
+      <td style="padding-left:<%= 10 + Math.max(0,(c.codigo.length - 2)) * 12 %>px"><%= c.nombre %></td>
+      <td class="c">
+        <span class="erp-badge-nat <%= c.naturaleza==='D'?'deb':'cred' %>"><%= c.naturaleza %></span>
+      </td>
+      <td class="r erp-amount-debit"><%= Number(c.total_debito).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      <td class="r erp-amount-credit"><%= Number(c.total_credito).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      <td class="r" style="font-weight:<%= c.tipo==='subcuenta'?'700':'400' %>;">
+        <%= Math.abs(c.saldo).toLocaleString('es-CO',{minimumFractionDigits:2}) %> <%= c.saldo >= 0 ? 'D' : 'C' %>
       </td>
     </tr>
   <% }) %>
-    <tr class="fila-gran-total">
-      <td colspan="2">GRAN TOTAL</td>
-      <td></td>
-      <td style="text-align:right;color:#7D4900;font-weight:700">$<%= totales.debito.toLocaleString('es-CO') %></td>
-      <td style="text-align:right;color:#1E5631;font-weight:700">$<%= totales.credito.toLocaleString('es-CO') %></td>
-      <td></td>
-    </tr>
   </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="3">Gran total</td>
+      <td class="r"><%= totales.debito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      <td class="r"><%= totales.credito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      <td class="r"></td>
+    </tr>
+  </tfoot>
 </table>
+</div>
 
 <style>
-.filtros-form { background:#f5f7fa;border:1px solid #ddd;border-radius:8px;padding:12px 16px;margin-bottom:1rem; }
-.filtros-row { display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start; }
-.filtro-grupo { display:flex;flex-direction:column;gap:4px; }
-.filtro-grupo label { font-size:12px;color:#555;font-weight:500; }
-.filtro-grupo input { border:1px solid #ccc;border-radius:6px;padding:6px 10px;font-size:13px; }
-.totales-bar { display:flex;gap:20px;background:#EBF5FB;border:1px solid #2E75B6;border-radius:8px;padding:10px 16px;font-size:13px;flex-wrap:wrap; }
-.totales-bar .equilibrado { color:#1E5631;font-weight:600; } .totales-bar .desequilibrado { color:#C0392B;font-weight:600; }
-.tabla-balance { width:100%;border-collapse:collapse;font-size:12px; }
-.tabla-balance th { background:#1F3864;color:#fff;padding:7px 10px; }
-.tabla-balance td { padding:4px 10px;border-bottom:1px solid #eee; }
-.fila-clase td { background:#1F3864;color:#fff;font-weight:700;font-size:12px;padding:6px 10px;letter-spacing:.05em; }
-.nivel-clase td { background:#E8EAF6;font-weight:700; }
-.nivel-grupo td { background:#EBF5FB;font-weight:600; }
-.nivel-cuenta td { background:#fff; }
-.nivel-subcuenta td { background:#FAFAFA; }
-.fila-gran-total td { background:#1F3864;color:#fff;font-weight:700;padding:8px 10px;border-top:3px solid #2E75B6; }
-.nat-badge { font-size:10px;padding:2px 6px;border-radius:8px; }
-.nat-badge.deb { background:#FDE8D8;color:#7D4900; } .nat-badge.cred { background:#D5E8D4;color:#1E5631; }
-@media print { .filtros-form,.btn,nav,.page-header a { display:none; } }
+@media print { .erp-search-panel, .erp-actions, nav, .erp-tabs { display:none; } }
 </style>
 <%- include('../partials/footer') %>

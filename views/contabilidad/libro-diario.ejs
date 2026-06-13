@@ -1,98 +1,106 @@
 <%- include('../partials/header') %>
-<div class="page-header">
-  <div><h2>Libro Diario</h2><p>Inversiones Uniatlantico S.A.S. — AG 2025</p></div>
-  <a href="/contabilidad" class="btn btn-secondary">← Libros</a>
+<%- include('../partials/erp-header', {
+  icon: '📒', title: 'Libro Diario',
+  tabs: [
+    { label: 'Libro mayor', href: '/contabilidad/libro-mayor', active: false },
+    { label: 'Libro diario', href: '/contabilidad/libro-diario', active: true },
+  ]
+}) %>
+
+<div class="erp-search-panel">
+  <div class="erp-search-panel-title">Opciones de búsqueda</div>
+  <form method="GET" action="/contabilidad/libro-diario">
+    <div class="erp-search-body">
+      <div class="erp-search-row erp-row-split">
+        <label>Fechas</label>
+        <div class="erp-field-wrap valid">
+          <input class="erp-input" type="date" name="desde" value="<%= fechaDesde %>">
+          <span class="erp-check">✓</span>
+        </div>
+        <div class="erp-field-wrap valid">
+          <input class="erp-input" type="date" name="hasta" value="<%= fechaHasta %>">
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+      <div class="erp-search-row">
+        <label>Filtrar por cuenta</label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" name="cuenta" value="<%= cuentaFiltro %>" placeholder="Ej: 1305, 4135, 24... (opcional)">
+        </div>
+      </div>
+    </div>
+    <div class="erp-actions">
+      <button type="submit" class="erp-btn erp-btn-blue"><span class="erp-btn-icon">🔎</span> Mostrar libro diario</button>
+      <button type="button" onclick="window.print()" class="erp-btn erp-btn-teal"><span class="erp-btn-icon">🖨</span> Imprimir libro diario</button>
+    </div>
+  </form>
 </div>
 
-<form method="GET" action="/contabilidad/libro-diario" class="filtros-form">
-  <div class="filtros-row">
-    <div class="filtro-grupo"><label>Desde</label><input type="date" name="desde" value="<%= fechaDesde %>"></div>
-    <div class="filtro-grupo"><label>Hasta</label><input type="date" name="hasta" value="<%= fechaHasta %>"></div>
-    <div class="filtro-grupo" style="flex:2"><label>Filtrar por cuenta (opcional)</label><input type="text" name="cuenta" value="<%= cuentaFiltro %>" placeholder="Ej: 1305, 4135, 24..."></div>
-    <div class="filtro-grupo" style="align-self:flex-end"><button type="submit" class="btn btn-primary">Consultar</button></div>
-    <div class="filtro-grupo" style="align-self:flex-end"><button type="button" onclick="window.print()" class="btn btn-secondary">🖨 Imprimir</button></div>
-  </div>
-</form>
-
-<div class="totales-bar">
+<div class="erp-totales-bar">
   <span>Asientos: <strong><%= asientos.length %></strong></span>
-  <span>Total débitos: <strong>$<%= totales.debito.toLocaleString('es-CO') %></strong></span>
-  <span>Total créditos: <strong>$<%= totales.credito.toLocaleString('es-CO') %></strong></span>
+  <span>Total débitos: <strong class="erp-amount-debit">$<%= totales.debito.toLocaleString('es-CO') %></strong></span>
+  <span>Total créditos: <strong class="erp-amount-credit">$<%= totales.credito.toLocaleString('es-CO') %></strong></span>
   <span class="<%= Math.abs(totales.debito - totales.credito) < 1 ? 'equilibrado' : 'desequilibrado' %>">
     <%= Math.abs(totales.debito - totales.credito) < 1 ? '✅ Partida doble cuadra' : '⚠ Diferencia: $' + Math.abs(totales.debito - totales.credito).toLocaleString('es-CO') %>
   </span>
 </div>
 
-<div style="margin-top:1rem;">
 <% asientos.forEach(a => { %>
-  <div class="asiento-card <%= a.es_caso_atipico ? 'atipico' : '' %>">
-    <div class="asiento-header">
-      <div class="asiento-meta">
-        <span class="comprobante"><%= a.numero_comprobante %></span>
-        <span class="fecha"><%= new Date(a.fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}) %></span>
-        <span class="tipo-badge"><%= a.tipo_comprobante %></span>
-        <% if(a.es_caso_atipico){ %><span class="atipico-badge">⚠ Caso <%= a.codigo_caso %></span><% } %>
-        <% if(a.estado === 'corregido'){ %><span class="corregido-badge">✅ Corregido</span><% } %>
-        <% if(a.estado === 'ajuste'){ %><span class="ajuste-badge">🔧 Asiento de ajuste</span><% } %>
-        <% if(a.es_caso_atipico && a.estado !== 'corregido' && a.estado !== 'ajuste'){ %>
-          <a href="/contabilidad/ajuste/<%= a.id %>" class="btn-ajuste">✏ Registrar ajuste</a>
-        <% } %>
-      </div>
-      <div class="asiento-concepto"><strong><%= a.concepto %></strong> — <span style="color:#666"><%= a.contraparte %></span></div>
-      <% if(a.es_caso_atipico && a.nota_pedagogica){ %>
-      <div class="nota-pedagogica">📌 <%= a.nota_pedagogica %></div>
+  <div class="erp-book-section">
+    <div class="erp-book-section-title">
+      <span class="comprobante"><%= a.numero_comprobante %></span>
+      <span class="fecha"><%= new Date(a.fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}) %></span>
+      <span class="tipo-badge"><%= a.tipo_comprobante %></span>
+      <% if(a.es_caso_atipico){ %><span class="atipico-badge">⚠ Caso <%= a.codigo_caso %></span><% } %>
+      <% if(a.estado === 'corregido'){ %><span class="corregido-badge">✅ Corregido</span><% } %>
+      <% if(a.estado === 'ajuste'){ %><span class="ajuste-badge">🔧 Asiento de ajuste</span><% } %>
+      <% if(a.es_caso_atipico && a.estado !== 'corregido' && a.estado !== 'ajuste'){ %>
+        <a href="/contabilidad/ajuste/<%= a.id %>" class="erp-btn erp-btn-blue" style="padding:3px 10px;font-size:11px;">✏ Registrar ajuste</a>
       <% } %>
+      <span style="font-weight:400;font-size:12.5px;color:var(--muted);">
+        — <%= a.concepto %> — <%= a.contraparte %>
+      </span>
     </div>
-    <table class="detalle-tabla">
-      <thead><tr><th style="width:100px">Cuenta</th><th>Descripción</th><th style="width:140px;text-align:right">Débito</th><th style="width:140px;text-align:right">Crédito</th></tr></thead>
+    <% if(a.es_caso_atipico && a.nota_pedagogica){ %>
+      <div class="nota-ped" style="margin-bottom:6px;">📌 <%= a.nota_pedagogica %></div>
+    <% } %>
+    <table class="erp-book-table">
+      <thead><tr>
+        <th style="width:100px">Código cuenta</th>
+        <th>Nombre cuenta</th>
+        <th class="r" style="width:150px">Débito</th>
+        <th class="r" style="width:150px">Crédito</th>
+      </tr></thead>
       <tbody>
       <% JSON.parse(JSON.stringify(a.detalles)).forEach(d => { %>
         <tr>
           <td><code><%= d.cuenta_codigo %></code></td>
-          <td style="font-size:12px"><%= d.cuenta_nombre %><% if(d.descripcion && d.descripcion !== d.cuenta_nombre){ %> — <span style="color:#555"><%= d.descripcion %></span><% } %></td>
-          <td style="text-align:right;color:<%= d.debito > 0 ? '#7D4900' : '#aaa' %>"><%= d.debito > 0 ? '$' + d.debito.toLocaleString('es-CO') : '' %></td>
-          <td style="text-align:right;color:<%= d.credito > 0 ? '#1E5631' : '#aaa' %>"><%= d.credito > 0 ? '$' + d.credito.toLocaleString('es-CO') : '' %></td>
+          <td><%= d.cuenta_nombre %><% if(d.descripcion && d.descripcion !== d.cuenta_nombre){ %> — <span style="color:var(--muted);"><%= d.descripcion %></span><% } %></td>
+          <td class="r <%= d.debito > 0 ? 'erp-amount-debit' : '' %>"><%= d.debito > 0 ? d.debito.toLocaleString('es-CO',{minimumFractionDigits:2}) : '0.00' %></td>
+          <td class="r <%= d.credito > 0 ? 'erp-amount-credit' : '' %>"><%= d.credito > 0 ? d.credito.toLocaleString('es-CO',{minimumFractionDigits:2}) : '0.00' %></td>
         </tr>
       <% }) %>
-        <tr class="fila-total">
-          <td colspan="2" style="text-align:right;font-weight:600;font-size:11px">TOTALES:</td>
-          <td style="text-align:right;font-weight:700;color:#7D4900">$<%= Number(a.total_debito).toLocaleString('es-CO') %></td>
-          <td style="text-align:right;font-weight:700;color:#1E5631">$<%= Number(a.total_credito).toLocaleString('es-CO') %></td>
-        </tr>
       </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Totales</td>
+          <td class="r"><%= Number(a.total_debito).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+          <td class="r"><%= Number(a.total_credito).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        </tr>
+      </tfoot>
     </table>
   </div>
 <% }) %>
-</div>
 
 <style>
-.filtros-form { background:#f5f7fa;border:1px solid #ddd;border-radius:8px;padding:12px 16px;margin-bottom:1rem; }
-.filtros-row { display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start; }
-.filtro-grupo { display:flex;flex-direction:column;gap:4px;min-width:130px; }
-.filtro-grupo label { font-size:12px;color:#555;font-weight:500; }
-.filtro-grupo input { border:1px solid #ccc;border-radius:6px;padding:6px 10px;font-size:13px; }
-.totales-bar { display:flex;gap:20px;background:#EBF5FB;border:1px solid #2E75B6;border-radius:8px;padding:10px 16px;font-size:13px;flex-wrap:wrap; }
-.totales-bar .equilibrado { color:#1E5631;font-weight:600; }
-.totales-bar .desequilibrado { color:#C0392B;font-weight:600; }
-.asiento-card { border:1px solid #ddd;border-radius:8px;margin-bottom:12px;overflow:hidden; }
-.asiento-card.atipico { border-color:#E67E22;box-shadow:0 0 0 2px rgba(230,126,34,.15); }
-.asiento-header { background:#f8f9fa;padding:10px 14px;border-bottom:1px solid #eee; }
-.asiento-meta { display:flex;gap:10px;align-items:center;margin-bottom:4px;flex-wrap:wrap; }
-.comprobante { font-family:monospace;font-weight:700;font-size:13px;color:#1F3864; }
-.fecha { font-size:12px;color:#555; }
-.tipo-badge { font-size:11px;background:#EBF5FB;color:#1F3864;padding:2px 8px;border-radius:10px; }
-.atipico-badge { font-size:11px;background:#FDEBD0;color:#784212;padding:2px 8px;border-radius:10px;font-weight:600; }
-.corregido-badge { font-size:11px;background:#D5E8D4;color:#1E5631;padding:2px 8px;border-radius:10px;font-weight:600; }
-.ajuste-badge { font-size:11px;background:#EBF5FB;color:#1F3864;padding:2px 8px;border-radius:10px;font-weight:600; }
-.btn-ajuste { font-size:11px;background:#1F3864;color:white;padding:3px 10px;border-radius:10px;font-weight:600;text-decoration:none;margin-left:4px; }
-.btn-ajuste:hover { background:#2E75B6; }
-.asiento-concepto { font-size:13px; }
-.nota-pedagogica { margin-top:6px;font-size:12px;background:#FFF3CD;border-left:3px solid #F0AD4E;padding:4px 10px;border-radius:0 4px 4px 0;color:#7D4900; }
-.detalle-tabla { width:100%;border-collapse:collapse;font-size:13px; }
-.detalle-tabla th { background:#1F3864;color:#fff;padding:6px 10px; }
-.detalle-tabla td { padding:5px 10px;border-bottom:1px solid #f0f0f0; }
-.detalle-tabla tr:hover td { background:#fafafa; }
-.fila-total td { background:#f0f0f0;border-top:2px solid #ddd; }
-@media print { .filtros-form,.btn,nav,.page-header a { display:none; } }
+.comprobante { font-family:monospace; font-weight:700; }
+.fecha { font-size:12px; color:var(--muted); font-weight:400; }
+.tipo-badge { font-size:11px; background:var(--erp-row-hover); color:var(--erp-header-bg); padding:2px 8px; border-radius:10px; font-weight:600; }
+.atipico-badge { font-size:11px; background:#FDEBD0; color:#784212; padding:2px 8px; border-radius:10px; font-weight:600; }
+.corregido-badge { font-size:11px; background:#D5E8D4; color:#1E5631; padding:2px 8px; border-radius:10px; font-weight:600; }
+.ajuste-badge { font-size:11px; background:var(--erp-row-hover); color:var(--erp-header-bg); padding:2px 8px; border-radius:10px; font-weight:600; }
+.nota-ped { font-size:12px; background:#FFF3CD; border-left:3px solid #F0AD4E; padding:4px 10px; border-radius:0 4px 4px 0; color:#7D4900; }
+@media print { .erp-search-panel, .erp-actions, nav, .erp-tabs { display:none; } }
 </style>
+
 <%- include('../partials/footer') %>

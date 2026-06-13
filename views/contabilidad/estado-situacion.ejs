@@ -1,0 +1,119 @@
+<%- include('../partials/header') %>
+<%- include('../partials/erp-header', {
+  icon: '📊', title: 'Estados financieros',
+  tabs: [
+    { label: 'Balance de prueba', href: '/contabilidad/balance-comprobacion', active: false },
+    { label: 'Estado de situación financiera', href: '/contabilidad/estado-situacion', active: true },
+    { label: 'Estado de resultado integral', href: '/contabilidad/estado-resultados', active: false },
+  ]
+}) %>
+
+<div class="erp-search-panel">
+  <div class="erp-search-panel-title">Opciones de búsqueda</div>
+  <form method="GET" action="/contabilidad/estado-situacion">
+    <div class="erp-search-body">
+      <div class="erp-search-row">
+        <label>Corte a fecha</label>
+        <div class="erp-field-wrap valid">
+          <input class="erp-input" type="date" name="hasta" value="<%= fechaHasta %>">
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+    </div>
+    <div class="erp-actions">
+      <button type="submit" class="erp-btn erp-btn-blue"><span class="erp-btn-icon">🔎</span> Mostrar estado de situación financiera</button>
+      <button type="button" onclick="window.print()" class="erp-btn erp-btn-teal"><span class="erp-btn-icon">🖨</span> Imprimir estado de situación financiera</button>
+    </div>
+  </form>
+</div>
+
+<div class="erp-totales-bar">
+  <span>Total Activo: <strong class="erp-amount-debit"><%= totalActivo.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
+  <span>Total Pasivo + Patrimonio: <strong class="erp-amount-credit"><%= totalPasivoPatrimonio.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
+  <span class="<%= Math.abs(totalActivo - totalPasivoPatrimonio) < 1 ? 'equilibrado' : 'desequilibrado' %>">
+    <%= Math.abs(totalActivo - totalPasivoPatrimonio) < 1 ? '✅ Activo = Pasivo + Patrimonio' : '⚠ Diferencia: $' + Math.abs(totalActivo - totalPasivoPatrimonio).toLocaleString('es-CO') %>
+  </span>
+</div>
+
+<%
+  const nivelClass = { clase: 'erp-level-1', grupo: 'erp-level-2', cuenta: 'erp-level-3', subcuenta: 'erp-level-4' };
+  const grupos = {
+    1: { titulo: 'ACTIVO', cuentas: cuentas.filter(c => c.codigo.startsWith('1')), total: totalActivo },
+    2: { titulo: 'PASIVO', cuentas: cuentas.filter(c => c.codigo.startsWith('2')), total: totalPasivo },
+    3: { titulo: 'PATRIMONIO', cuentas: cuentas.filter(c => c.codigo.startsWith('3')), total: null },
+  };
+%>
+
+<!-- ACTIVO -->
+<div class="erp-book-section">
+  <div class="erp-book-section-title">ACTIVO — al <%= new Date(fechaHasta).toLocaleDateString('es-CO') %></div>
+  <table class="erp-book-table">
+    <thead><tr><th style="width:90px">Código</th><th>Cuenta</th><th class="r" style="width:170px">Valor</th></tr></thead>
+    <tbody>
+    <% grupos[1].cuentas.forEach(c => { %>
+      <tr class="<%= nivelClass[c.tipo] || '' %>">
+        <td><code style="font-size:11px"><%= c.codigo %></code></td>
+        <td style="padding-left:<%= 10 + Math.max(0,(c.codigo.length - 1)) * 12 %>px"><%= c.nombre %></td>
+        <td class="r"><%= Math.abs(Number(c.saldo)).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="2">TOTAL ACTIVO</td><td class="r"><%= totalActivo.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td></tr>
+    </tfoot>
+  </table>
+</div>
+
+<!-- PASIVO -->
+<div class="erp-book-section">
+  <div class="erp-book-section-title">PASIVO — al <%= new Date(fechaHasta).toLocaleDateString('es-CO') %></div>
+  <table class="erp-book-table">
+    <thead><tr><th style="width:90px">Código</th><th>Cuenta</th><th class="r" style="width:170px">Valor</th></tr></thead>
+    <tbody>
+    <% grupos[2].cuentas.forEach(c => { %>
+      <tr class="<%= nivelClass[c.tipo] || '' %>">
+        <td><code style="font-size:11px"><%= c.codigo %></code></td>
+        <td style="padding-left:<%= 10 + Math.max(0,(c.codigo.length - 1)) * 12 %>px"><%= c.nombre %></td>
+        <td class="r"><%= Math.abs(Number(c.saldo)).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="2">TOTAL PASIVO</td><td class="r"><%= totalPasivo.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td></tr>
+    </tfoot>
+  </table>
+</div>
+
+<!-- PATRIMONIO -->
+<div class="erp-book-section">
+  <div class="erp-book-section-title">PATRIMONIO — al <%= new Date(fechaHasta).toLocaleDateString('es-CO') %></div>
+  <table class="erp-book-table">
+    <thead><tr><th style="width:90px">Código</th><th>Cuenta</th><th class="r" style="width:170px">Valor</th></tr></thead>
+    <tbody>
+    <% grupos[3].cuentas.forEach(c => { %>
+      <tr class="<%= nivelClass[c.tipo] || '' %>">
+        <td><code style="font-size:11px"><%= c.codigo %></code></td>
+        <td style="padding-left:<%= 10 + Math.max(0,(c.codigo.length - 1)) * 12 %>px"><%= c.nombre %></td>
+        <td class="r"><%= Math.abs(Number(c.saldo)).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      </tr>
+    <% }) %>
+      <tr class="erp-level-3">
+        <td>-</td>
+        <td>Utilidad / pérdida del ejercicio (Ingresos − Costos − Gastos)</td>
+        <td class="r"><%= Math.abs(utilidadEjercicio).toLocaleString('es-CO',{minimumFractionDigits:2}) %> <%= utilidadEjercicio < 0 ? '(pérdida)' : '' %></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="2">TOTAL PATRIMONIO</td><td class="r"><%= totalPatrimonio.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td></tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="erp-totales-bar" style="background:var(--erp-header-bg);color:#fff;">
+  <span>TOTAL PASIVO + PATRIMONIO: <strong><%= totalPasivoPatrimonio.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
+</div>
+
+<style>
+@media print { .erp-search-panel, .erp-actions, nav, .erp-tabs { display:none; } }
+</style>
+<%- include('../partials/footer') %>

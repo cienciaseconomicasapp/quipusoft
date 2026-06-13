@@ -1,44 +1,52 @@
 <%- include('../partials/header') %>
-<div class="page-header">
-  <div><h2>Plan de Cuentas — PUC</h2><p>Inversiones Uniatlantico S.A.S. — Empresa comercial</p></div>
-  <a href="/contabilidad" class="btn btn-secondary">← Volver</a>
+<%- include('../partials/erp-header', { icon: '📋', title: 'Plan de Cuentas — PUC' }) %>
+
+<div class="erp-search-panel">
+  <div class="erp-search-panel-title">Información de la empresa</div>
+  <div class="erp-search-body">
+    <div class="erp-search-row">
+      <label>Empresa</label>
+      <div class="erp-field-wrap">
+        <span style="font-size:13px;">Inversiones Uniatlántico S.A.S. — NIT 900.123.456-7 — Empresa comercial</span>
+      </div>
+    </div>
+    <div class="erp-search-row">
+      <label>Cuentas activas</label>
+      <div class="erp-field-wrap">
+        <span style="font-size:13px;"><%= cuentas.length %> cuentas del Plan Único de Cuentas (PUC)</span>
+      </div>
+    </div>
+  </div>
+  <div class="erp-actions">
+    <a href="/contabilidad" class="erp-btn erp-btn-outline"><span class="erp-btn-icon">←</span> Volver a libros</a>
+    <button type="button" onclick="window.print()" class="erp-btn erp-btn-blue"><span class="erp-btn-icon">🖨</span> Imprimir plan de cuentas</button>
+  </div>
 </div>
 
-<div class="table-responsive" style="margin-top:1rem;">
-<table class="tabla-libros">
+<div class="erp-items-table-wrap" style="padding:0;">
+<table class="erp-book-table">
   <thead><tr>
     <th style="width:120px">Código</th>
     <th>Nombre de la cuenta</th>
-    <th style="width:80px">Naturaleza</th>
-    <th style="width:100px">Nivel</th>
+    <th class="c" style="width:110px">Naturaleza</th>
+    <th class="c" style="width:110px">Nivel</th>
   </tr></thead>
   <tbody>
+  <% const nivelClass = { clase: 'erp-level-1', grupo: 'erp-level-2', cuenta: 'erp-level-3', subcuenta: 'erp-level-4' }; %>
   <% cuentas.forEach(c => { %>
-    <tr class="nivel-<%= c.tipo %>">
+    <tr class="<%= nivelClass[c.tipo] || '' %>">
       <td><code style="font-size:12px;"><%= c.codigo %></code></td>
-      <td style="padding-left:<%= (c.codigo.length - 1) * 10 %>px"><%= c.nombre %></td>
-      <td style="text-align:center;">
-        <span class="badge-nat <%= c.naturaleza === 'D' ? 'deb' : 'cred' %>">
+      <td style="padding-left:<%= 10 + (c.codigo.length - 1) * 14 %>px"><%= c.nombre %></td>
+      <td class="c">
+        <span class="erp-badge-nat <%= c.naturaleza === 'D' ? 'deb' : 'cred' %>">
           <%= c.naturaleza === 'D' ? 'Débito' : 'Crédito' %>
         </span>
       </td>
-      <td style="text-align:center;font-size:11px;color:#666;text-transform:capitalize;"><%= c.tipo %></td>
+      <td class="c" style="font-size:11px;color:var(--muted);text-transform:capitalize;"><%= c.tipo %></td>
     </tr>
   <% }) %>
   </tbody>
 </table>
 </div>
 
-<style>
-.tabla-libros { width:100%;border-collapse:collapse;font-size:13px; }
-.tabla-libros th { background:#1F3864;color:#fff;padding:8px 10px;text-align:left; }
-.tabla-libros td { padding:5px 10px;border-bottom:1px solid #eee; }
-.nivel-clase td { background:#E8EAF6;font-weight:700;font-size:14px; }
-.nivel-grupo td { background:#EBF5FB;font-weight:600; }
-.nivel-cuenta td { background:#fff; }
-.nivel-subcuenta td { background:#FAFAFA;font-size:12px; }
-.badge-nat { font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600; }
-.badge-nat.deb { background:#FDE8D8;color:#7D4900; }
-.badge-nat.cred { background:#D5E8D4;color:#1E5631; }
-</style>
 <%- include('../partials/footer') %>
