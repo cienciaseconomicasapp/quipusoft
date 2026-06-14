@@ -538,4 +538,167 @@ router.post('/ajuste/:asientoId', requireAuth, async (req, res) => {
   }
 });
 
+// ═════════════════════════════════════════════════════════════════════════
+// CUENTAS — gestión del plan de cuentas (incluye creación de auxiliares 8 díg.)
+// ═════════════════════════════════════════════════════════════════════════
+router.get('/cuentas', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  try {
+    const { rows } = await pool.query(`SELECT * FROM ${s}.plan_cuentas ORDER BY codigo`);
+    res.render('contabilidad/cuentas', {
+      title: 'Cuentas — Quipusoft',
+      user: req.user,
+      cuentas: rows,
+      error: req.flash('error'),
+      success: req.flash('success'),
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Error: ' + e.message);
+    res.redirect('/contabilidad');
+  }
+});
+
+// Crear / actualizar una cuenta (típicamente un auxiliar de 8 dígitos)
+router.post('/cuentas', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  const { codigo, nombre, naturaleza, tipo, padre } = req.body;
+
+  if (!codigo || !nombre || !naturaleza || !tipo) {
+    req.flash('error', 'Código, nombre, naturaleza y tipo son obligatorios.');
+    return res.redirect('/contabilidad/cuentas');
+  }
+  if (!/^\d{1,10}$/.test(codigo)) {
+    req.flash('error', 'El código debe contener solo dígitos (hasta 10).');
+    return res.redirect('/contabilidad/cuentas');
+  }
+  if (!['D', 'C'].includes(naturaleza)) {
+    req.flash('error', 'La naturaleza debe ser D (débito) o C (crédito).');
+    return res.redirect('/contabilidad/cuentas');
+  }
+
+  try {
+    // Si se especifica padre, validar que exista
+    if (padre) {
+      const { rows } = await pool.query(`SELECT codigo FROM ${s}.plan_cuentas WHERE codigo = $1`, [padre]);
+      if (rows.length === 0) {
+        req.flash('error', `La cuenta padre ${padre} no existe en el plan de cuentas.`);
+        return res.redirect('/contabilidad/cuentas');
+      }
+    }
+
+    await pool.query(
+      `INSERT INTO ${s}.plan_cuentas (codigo, nombre, naturaleza, tipo, padre)
+       VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (codigo) DO UPDATE SET nombre = EXCLUDED.nombre, naturaleza = EXCLUDED.naturaleza, tipo = EXCLUDED.tipo, padre = EXCLUDED.padre`,
+      [codigo, nombre, naturaleza, tipo, padre || null]
+    );
+    req.flash('success', `Cuenta ${codigo} — ${nombre} guardada correctamente.`);
+    res.redirect('/contabilidad/cuentas');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Error al guardar la cuenta: ' + e.message);
+    res.redirect('/contabilidad/cuentas');
+  }
+});
+
+// Activar / inactivar una cuenta
+router.post('/cuentas/:codigo/toggle', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  try {
+    await pool.query(`UPDATE ${s}.plan_cuentas SET activa = NOT activa WHERE codigo = $1`, [req.params.codigo]);
+    req.flash('success', `Estado de la cuenta ${req.params.codigo} actualizado.`);
+  } catch (e) {
+    req.flash('error', 'Error: ' + e.message);
+  }
+  res.redirect('/contabilidad/cuentas');
+});
+
+// ═════════════════════════════════════════════════════════════════════════
+// TERCEROS — gestión de clientes, proveedores y accionistas (para exógena)
+// ═════════════════════════════════════════════════════════════════════════
+const dane = require('../data/dane');
+
+router.get('/terceros', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  try {
+    const { rows } = await pool.query(`SELECT * FROM ${s}.terceros ORDER BY codigo`);
+    res.render('contabilidad/terceros', {
+      title: 'Terceros — Quipusoft',
+      user: req.user,
+      terceros: rows,
+      dane,
+      error: req.flash('error'),
+      success: req.flash('success'),
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Error: ' + e.message);
+    res.redirect('/contabilidad');
+  }
+});
+
+router.post('/terceros', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  const {
+    codigo, tipo_documento, identificacion,
+    primer_apellido, segundo_apellido, primer_nombre, segundo_nombre, razon_social,
+    direccion, cod_departamento, cod_municipio, pais,
+    es_cliente, es_proveedor, es_accionista, es_empleado,
+  } = req.body;
+
+  if (!codigo || !tipo_documento || !identificacion) {
+    req.flash('error', 'Código, tipo de documento e identificación son obligatorios.');
+    return res.redirect('/contabilidad/terceros');
+  }
+  if (tipo_documento !== 'NIT' && !(primer_apellido && primer_nombre)) {
+    req.flash('error', 'Para personas naturales, primer apellido y primer nombre son obligatorios.');
+    return res.redirect('/contabilidad/terceros');
+  }
+  if (tipo_documento === 'NIT' && !razon_social) {
+    req.flash('error', 'Para personas jurídicas (NIT), la razón social es obligatoria.');
+    return res.redirect('/contabilidad/terceros');
+  }
+
+  try {
+    await pool.query(
+      `INSERT INTO ${s}.terceros
+        (codigo, tipo_documento, identificacion, primer_apellido, segundo_apellido,
+         primer_nombre, segundo_nombre, razon_social, direccion, cod_departamento,
+         cod_municipio, pais, es_cliente, es_proveedor, es_accionista, es_empleado)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       ON CONFLICT (codigo) DO UPDATE SET
+         tipo_documento = EXCLUDED.tipo_documento, identificacion = EXCLUDED.identificacion,
+         primer_apellido = EXCLUDED.primer_apellido, segundo_apellido = EXCLUDED.segundo_apellido,
+         primer_nombre = EXCLUDED.primer_nombre, segundo_nombre = EXCLUDED.segundo_nombre,
+         razon_social = EXCLUDED.razon_social, direccion = EXCLUDED.direccion,
+         cod_departamento = EXCLUDED.cod_departamento, cod_municipio = EXCLUDED.cod_municipio,
+         pais = EXCLUDED.pais, es_cliente = EXCLUDED.es_cliente, es_proveedor = EXCLUDED.es_proveedor,
+         es_accionista = EXCLUDED.es_accionista, es_empleado = EXCLUDED.es_empleado`,
+      [codigo, tipo_documento, identificacion,
+       primer_apellido || '', segundo_apellido || '', primer_nombre || '', segundo_nombre || '',
+       razon_social || '', direccion || null, cod_departamento || null, cod_municipio || null,
+       pais || '169', !!es_cliente, !!es_proveedor, !!es_accionista, !!es_empleado]
+    );
+    req.flash('success', `Tercero ${codigo} guardado correctamente.`);
+    res.redirect('/contabilidad/terceros');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Error al guardar el tercero: ' + e.message);
+    res.redirect('/contabilidad/terceros');
+  }
+});
+
+// Activar / inactivar un tercero
+router.post('/terceros/:codigo/toggle', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  try {
+    await pool.query(`UPDATE ${s}.terceros SET activo = NOT activo WHERE codigo = $1`, [req.params.codigo]);
+    req.flash('success', `Estado del tercero ${req.params.codigo} actualizado.`);
+  } catch (e) {
+    req.flash('error', 'Error: ' + e.message);
+  }
+  res.redirect('/contabilidad/terceros');
+});
+
 module.exports = router;

@@ -1,0 +1,101 @@
+<%- include('../partials/header') %>
+<%- include('../partials/erp-header', { icon: '🗂️', title: 'Cuentas — Plan de Cuentas' }) %>
+
+<% if(success && success.length){ %><div class="alert alert-success" style="margin-bottom:1rem;"><%= success %></div><% } %>
+<% if(error && error.length){ %><div class="alert alert-error" style="margin-bottom:1rem;"><%= error %></div><% } %>
+
+<div class="erp-form-card">
+  <div class="erp-form-card-title">Crear / editar cuenta (típicamente un auxiliar de 8 dígitos)</div>
+  <div class="erp-form-card-note">
+    Estructura: Clase (1 dígito) → Grupo (2) → Cuenta (4) → Subcuenta (6) → <strong>Auxiliar (8)</strong>.
+    Los asientos se registran a nivel auxiliar. Si el código ya existe, se actualiza.
+  </div>
+  <form method="POST" action="/contabilidad/cuentas">
+    <div class="erp-form-body">
+      <div class="erp-form-field">
+        <label>Código<span class="req">*</span></label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" name="codigo" pattern="\d{1,10}" placeholder="Ej: 15241030" required>
+        </div>
+      </div>
+      <div class="erp-form-field">
+        <label>Nombre<span class="req">*</span></label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" name="nombre" placeholder="Ej: Computador portátil Dell" required>
+        </div>
+      </div>
+      <div class="erp-form-field">
+        <label>Naturaleza<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="naturaleza" required>
+            <option value="D">Débito</option>
+            <option value="C">Crédito</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+      <div class="erp-form-field">
+        <label>Nivel<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="tipo" required>
+            <option value="auxiliar" selected>Auxiliar (8 dígitos)</option>
+            <option value="subcuenta">Subcuenta (6 dígitos)</option>
+            <option value="cuenta">Cuenta (4 dígitos)</option>
+            <option value="grupo">Grupo (2 dígitos)</option>
+            <option value="clase">Clase (1 dígito)</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+      <div class="erp-form-field span-2">
+        <label>Cuenta padre (código de la subcuenta de 6 dígitos)</label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" name="padre" placeholder="Ej: 152410 (déjalo vacío si es clase/grupo/cuenta de nivel superior)">
+        </div>
+      </div>
+    </div>
+    <div class="erp-actions">
+      <button type="submit" class="erp-btn erp-btn-blue"><span class="erp-btn-icon">💾</span> Guardar cuenta</button>
+    </div>
+  </form>
+</div>
+
+<div class="erp-items-table-wrap" style="padding:0;">
+<table class="erp-book-table">
+  <thead><tr>
+    <th style="width:120px">Código</th>
+    <th>Nombre de la cuenta</th>
+    <th class="c" style="width:100px">Naturaleza</th>
+    <th class="c" style="width:100px">Nivel</th>
+    <th style="width:110px">Padre</th>
+    <th class="c" style="width:90px">Estado</th>
+    <th class="c" style="width:90px">Acción</th>
+  </tr></thead>
+  <tbody>
+  <% const nivelClass = { clase: 'erp-level-1', grupo: 'erp-level-2', cuenta: 'erp-level-3', subcuenta: 'erp-level-4', auxiliar: 'erp-level-4' }; %>
+  <% cuentas.forEach(c => { %>
+    <tr class="<%= nivelClass[c.tipo] || '' %>" style="<%= !c.activa ? 'opacity:.5;' : '' %>">
+      <td><code style="font-size:12px;"><%= c.codigo %></code></td>
+      <td style="padding-left:<%= 10 + (c.codigo.length - 1) * 10 %>px"><%= c.nombre %></td>
+      <td class="c">
+        <span class="erp-badge-nat <%= c.naturaleza === 'D' ? 'deb' : 'cred' %>">
+          <%= c.naturaleza === 'D' ? 'Débito' : 'Crédito' %>
+        </span>
+      </td>
+      <td class="c" style="font-size:11px;color:var(--muted);text-transform:capitalize;"><%= c.tipo %></td>
+      <td><code style="font-size:11px;color:var(--muted);"><%= c.padre || '-' %></code></td>
+      <td class="c"><%= c.activa ? '✅ Activa' : '⛔ Inactiva' %></td>
+      <td class="c">
+        <form method="POST" action="/contabilidad/cuentas/<%= c.codigo %>/toggle" style="display:inline;">
+          <button type="submit" class="erp-btn erp-btn-outline" style="padding:3px 8px;font-size:11px;">
+            <%= c.activa ? 'Inactivar' : 'Activar' %>
+          </button>
+        </form>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>
+</div>
+
+<%- include('../partials/footer') %>

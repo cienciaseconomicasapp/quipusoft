@@ -69,11 +69,16 @@ const FUENTES_ASIENTO = {
 
 router.get('/nueva/form', requireAuth, setSchema, async (req, res) => {
   const schema = req.schema;
-  const [clientes, proveedores, cuentas] = await Promise.all([
-    pool.query(`SELECT * FROM "${schema}".clientes WHERE activo = TRUE ORDER BY razon_social`),
-    pool.query(`SELECT * FROM "${schema}".proveedores WHERE activo = TRUE ORDER BY razon_social`),
+  const nombreExpr = `CASE WHEN razon_social <> '' THEN razon_social
+    ELSE TRIM(CONCAT(primer_nombre, ' ', segundo_nombre, ' ', primer_apellido, ' ', segundo_apellido)) END`;
+
+  const [clientesQ, proveedoresQ, cuentas] = await Promise.all([
+    pool.query(`SELECT *, ${nombreExpr} AS nombre FROM "${schema}".terceros WHERE activo = TRUE AND es_cliente = TRUE ORDER BY nombre`),
+    pool.query(`SELECT *, ${nombreExpr} AS nombre FROM "${schema}".terceros WHERE activo = TRUE AND es_proveedor = TRUE ORDER BY nombre`),
     pool.query(`SELECT codigo, nombre, naturaleza FROM "${schema}".plan_cuentas WHERE activa = TRUE ORDER BY codigo`),
   ]);
+  const clientes = { rows: clientesQ.rows.map(c => ({ ...c, razon_social: c.nombre })) };
+  const proveedores = { rows: proveedoresQ.rows.map(p => ({ ...p, razon_social: p.nombre })) };
 
   // Listado combinado de terceros (clientes + proveedores) para el campo "Tercero"
   const terceros = [

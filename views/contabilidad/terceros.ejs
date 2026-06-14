@@ -1,0 +1,181 @@
+<%- include('../partials/header') %>
+<%- include('../partials/erp-header', { icon: '👥', title: 'Terceros' }) %>
+
+<% if(success && success.length){ %><div class="alert alert-success" style="margin-bottom:1rem;"><%= success %></div><% } %>
+<% if(error && error.length){ %><div class="alert alert-error" style="margin-bottom:1rem;"><%= error %></div><% } %>
+
+<div class="erp-form-card">
+  <div class="erp-form-card-title">Crear / editar tercero</div>
+  <div class="erp-form-card-note">
+    Para <strong>personas naturales</strong>, completa apellidos y nombres (deja "Razón social" vacía).
+    Para <strong>personas jurídicas (NIT)</strong>, completa solo "Razón social".
+    Los datos de ubicación (departamento, municipio, país) siguen la codificación DANE para el reporte de exógena.
+  </div>
+  <form method="POST" action="/contabilidad/terceros">
+    <div class="erp-form-body">
+
+      <div class="erp-form-field">
+        <label>Código interno<span class="req">*</span></label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" name="codigo" placeholder="Ej: C-09, P-09, A-04" required>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Tipo de documento<span class="req">*</span></label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="tipo_documento" id="tipo_documento" required>
+            <option value="CC">Cédula de ciudadanía</option>
+            <option value="CE">Cédula de extranjería</option>
+            <option value="NIT">NIT</option>
+            <option value="PA">Pasaporte</option>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Identificación<span class="req">*</span></label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" name="identificacion" placeholder="Sin puntos ni guiones" required>
+        </div>
+      </div>
+
+      <div class="erp-form-field span-2">
+        <label>Razón social <span style="color:var(--muted);font-weight:400;">(solo personas jurídicas — NIT)</span></label>
+        <div class="erp-field-wrap">
+          <input class="erp-input" type="text" name="razon_social" id="razon_social" placeholder="Ej: Tecno Norte S.A.S.">
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Primer apellido</label>
+        <div class="erp-field-wrap"><input class="erp-input persona-natural" type="text" name="primer_apellido"></div>
+      </div>
+      <div class="erp-form-field">
+        <label>Segundo apellido</label>
+        <div class="erp-field-wrap"><input class="erp-input persona-natural" type="text" name="segundo_apellido"></div>
+      </div>
+      <div class="erp-form-field">
+        <label>Primer nombre</label>
+        <div class="erp-field-wrap"><input class="erp-input persona-natural" type="text" name="primer_nombre"></div>
+      </div>
+      <div class="erp-form-field">
+        <label>Segundo nombre</label>
+        <div class="erp-field-wrap"><input class="erp-input persona-natural" type="text" name="segundo_nombre"></div>
+      </div>
+
+      <div class="erp-form-field span-2">
+        <label>Dirección</label>
+        <div class="erp-field-wrap"><input class="erp-input" type="text" name="direccion" placeholder="Calle / Carrera, número, ciudad"></div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Departamento (DANE)</label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="cod_departamento">
+            <% dane.departamentos.forEach(d => { %><option value="<%= d.codigo %>" <%= d.codigo==='08'?'selected':'' %>><%= d.codigo %> — <%= d.nombre %></option><% }) %>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>Municipio (DANE)</label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="cod_municipio">
+            <% dane.municipios.forEach(m => { %><option value="<%= m.codigo %>" <%= m.codigo==='08001'?'selected':'' %>><%= m.codigo %> — <%= m.nombre %></option><% }) %>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field">
+        <label>País</label>
+        <div class="erp-field-wrap valid">
+          <select class="erp-select" name="pais">
+            <% dane.paises.forEach(p => { %><option value="<%= p.codigo %>" <%= p.codigo==='169'?'selected':'' %>><%= p.codigo %> — <%= p.nombre %></option><% }) %>
+          </select>
+          <span class="erp-check">✓</span>
+        </div>
+      </div>
+
+      <div class="erp-form-field span-2">
+        <label>Rol del tercero</label>
+        <div class="erp-field-wrap" style="gap:18px;">
+          <label style="font-weight:400;display:flex;align-items:center;gap:6px;"><input type="checkbox" name="es_cliente"> Cliente</label>
+          <label style="font-weight:400;display:flex;align-items:center;gap:6px;"><input type="checkbox" name="es_proveedor"> Proveedor</label>
+          <label style="font-weight:400;display:flex;align-items:center;gap:6px;"><input type="checkbox" name="es_accionista"> Accionista</label>
+          <label style="font-weight:400;display:flex;align-items:center;gap:6px;"><input type="checkbox" name="es_empleado"> Empleado</label>
+        </div>
+      </div>
+
+    </div>
+    <div class="erp-actions">
+      <button type="submit" class="erp-btn erp-btn-blue"><span class="erp-btn-icon">💾</span> Guardar tercero</button>
+    </div>
+  </form>
+</div>
+
+<div class="erp-items-table-wrap" style="padding:0;">
+<table class="erp-book-table">
+  <thead><tr>
+    <th style="width:70px">Código</th>
+    <th style="width:90px">Documento</th>
+    <th>Nombre / Razón social</th>
+    <th>Dirección</th>
+    <th class="c" style="width:70px">Depto</th>
+    <th class="c" style="width:70px">Municipio</th>
+    <th class="c" style="width:160px">Roles</th>
+    <th class="c" style="width:90px">Estado</th>
+    <th class="c" style="width:90px">Acción</th>
+  </tr></thead>
+  <tbody>
+  <% terceros.forEach(t => { %>
+    <tr style="<%= !t.activo ? 'opacity:.5;' : '' %>">
+      <td><code style="font-size:11px;"><%= t.codigo %></code></td>
+      <td style="font-size:11px;"><%= t.tipo_documento %> <%= t.identificacion %></td>
+      <td>
+        <% if (t.razon_social) { %>
+          <%= t.razon_social %>
+        <% } else { %>
+          <%= [t.primer_nombre, t.segundo_nombre, t.primer_apellido, t.segundo_apellido].filter(Boolean).join(' ') %>
+        <% } %>
+      </td>
+      <td style="font-size:11.5px;color:var(--muted);"><%= t.direccion || '-' %></td>
+      <td class="c"><%= t.cod_departamento || '-' %></td>
+      <td class="c"><%= t.cod_municipio || '-' %></td>
+      <td class="c" style="font-size:11px;">
+        <% const roles = []; %>
+        <% if(t.es_cliente) roles.push('Cliente'); %>
+        <% if(t.es_proveedor) roles.push('Proveedor'); %>
+        <% if(t.es_accionista) roles.push('Accionista'); %>
+        <% if(t.es_empleado) roles.push('Empleado'); %>
+        <%= roles.join(', ') || '-' %>
+      </td>
+      <td class="c"><%= t.activo ? '✅' : '⛔' %></td>
+      <td class="c">
+        <form method="POST" action="/contabilidad/terceros/<%= t.codigo %>/toggle" style="display:inline;">
+          <button type="submit" class="erp-btn erp-btn-outline" style="padding:3px 8px;font-size:11px;">
+            <%= t.activo ? 'Inactivar' : 'Activar' %>
+          </button>
+        </form>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>
+</div>
+
+<script>
+document.getElementById('tipo_documento').addEventListener('change', function() {
+  const esJuridica = this.value === 'NIT';
+  document.getElementById('razon_social').required = esJuridica;
+  document.querySelectorAll('.persona-natural').forEach(function(input) {
+    input.disabled = esJuridica;
+    if (esJuridica) input.value = '';
+  });
+});
+</script>
+
+<%- include('../partials/footer') %>
