@@ -1,11 +1,11 @@
 <%- include('../partials/header', {title: title}) %>
 <div class="page-header">
   <h2>Declaraciones tributarias</h2>
-  <p>Inversiones Uniatlantico S.A.S. &nbsp;|&nbsp; NIT: 900.123.456-7 &nbsp;|&nbsp; Año gravable 2025</p>
+  <p>Inversiones Uniatlántico S.A.S. &nbsp;|&nbsp; NIT: 900.123.456-7 &nbsp;|&nbsp; Año gravable <%= anno %></p>
 </div>
 
 <div class="tip-box" style="background:#EBF5FB;border-left:4px solid #2E75B6;padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:1.5rem;">
-  Los valores calculados aquí provienen del libro de transacciones. Expórtalos a <strong>MokanaTax</strong> para presentar las declaraciones oficialmente con número de radicado.
+  Los valores calculados aquí provienen directamente del Libro Diario (asientos contables). Expórtalos a <strong>MokanaTax</strong> para presentar las declaraciones oficialmente con número de radicado.
 </div>
 
 <div class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
@@ -34,7 +34,7 @@
   <div class="form-card" style="text-align:center;">
     <div style="width:56px;height:56px;background:var(--blue);color:white;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;margin:0 auto 10px;">110</div>
     <h3 style="font-size:15px;font-weight:600;color:var(--blue);margin-bottom:4px;">Renta personas jurídicas</h3>
-    <p style="color:var(--muted);font-size:12px;margin-bottom:10px;">Formulario 110 — Año gravable 2025</p>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:10px;">Formulario 110 — Año gravable <%= anno %></p>
     <a href="/declaraciones/renta" class="btn btn-primary" style="margin-top:8px;display:inline-block;">Ver liquidación</a>
   </div>
 </div>

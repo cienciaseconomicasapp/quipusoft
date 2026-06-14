@@ -1,60 +1,54 @@
 <%- include('../partials/header', {title: title}) %>
 <div class="page-header" style="display:flex;justify-content:space-between;">
   <div>
-    <h2>Formulario 110 — Renta AG 2025</h2>
-    <p>Inversiones Uniatlantico S.A.S. &nbsp;|&nbsp; NIT: 900.123.456-7 &nbsp;|&nbsp; Tarifa: 35%</p>
+    <h2>Formulario 110 — Renta AG <%= anno %></h2>
+    <p>Inversiones Uniatlántico S.A.S. &nbsp;|&nbsp; NIT: 900.123.456-7 &nbsp;|&nbsp; Tarifa: <%= tarifaRenta %>%</p>
   </div>
   <a href="/declaraciones" class="btn btn-secondary">Volver</a>
 </div>
 
 <div class="tip-box" style="background:#EBF5FB;border-left:4px solid #2E75B6;padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:1rem;">
-  Liquidación estimada basada en el libro contable. Para presentar oficialmente: 
-  <a href="<%= mokanataxUrl %>/declaraciones/renta" target="_blank" class="btn-link">MokanaTax → Form. 110</a>
+  Liquidación estimada basada en el Libro Diario (ingresos = cuentas clase 4, costos = clase 6, gastos = clase 5).
+  Para presentar oficialmente: <a href="<%= mokanataxUrl %>/declaraciones/renta" target="_blank" class="btn-link">MokanaTax → Form. 110</a>
 </div>
 
 <div class="form-card">
   <div style="display:flex;align-items:center;gap:16px;padding:12px 16px;background:var(--blue);color:white;border-radius:8px;margin-bottom:1.5rem;">
     <div style="font-size:28px;font-weight:700;background:rgba(255,255,255,0.15);padding:8px 16px;border-radius:8px;">110</div>
     <div><strong>Declaración de Renta y Complementarios — Personas Jurídicas</strong><br>
-    <small>Año Gravable 2025 — NIT: 900.123.456-7 — Tarifa: 35% (Art. 240 ET — Ley 2277/2022)</small></div>
+    <small>Año Gravable <%= anno %> — NIT: 900.123.456-7 — Tarifa: <%= tarifaRenta %>% (Art. 240 ET — Ley 2277/2022)</small></div>
   </div>
 
   <div style="background:var(--blue-light);padding:6px 12px;border-radius:4px;font-size:12px;font-weight:600;color:var(--blue);margin:1rem 0 8px;text-transform:uppercase;">Sección ingresos</div>
-  <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-    <span>Casilla 47 — Ingresos brutos de actividades ordinarias</span>
-    <strong>$<%= Number(ingresosNetos + (ivaDevoluciones||0)).toLocaleString('es-CO') %></strong>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-    <span>Casilla 59 — Devoluciones, rebajas y descuentos</span>
-    <strong style="color:var(--red)">($<%= Number(0).toLocaleString('es-CO') %>)</strong>
-  </div>
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 12px;background:var(--blue-light);border-radius:4px;margin-top:4px;font-size:14px;font-weight:600;">
-    <span>Casilla 61 — Total ingresos netos</span>
-    <strong>$<%= Number(ingresosNetos).toLocaleString('es-CO') %></strong>
+    <span>Casilla 61 — Total ingresos netos (cuentas clase 4)</span>
+    <strong>$<%= Number(ingresos).toLocaleString('es-CO') %></strong>
   </div>
 
   <div style="background:var(--blue-light);padding:6px 12px;border-radius:4px;font-size:12px;font-weight:600;color:var(--blue);margin:1rem 0 8px;text-transform:uppercase;">Costos y deducciones</div>
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-    <span>Casilla 62 — Costos de ventas</span>
+    <span>Casilla 62 — Costos de ventas (cuentas clase 6)</span>
     <strong>$<%= Number(costos).toLocaleString('es-CO') %></strong>
   </div>
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-    <span>Casilla 63 — Gastos de administración (nómina)</span>
-    <strong>$<%= Number(gastoNomina).toLocaleString('es-CO') %></strong>
+    <span>Casilla 63 — Gastos de administración y ventas deducibles (cuentas clase 5)</span>
+    <strong>$<%= Number(gastos).toLocaleString('es-CO') %></strong>
   </div>
-  <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-    <span>Casilla 66 — Depreciaciones activos fijos</span>
-    <strong>$<%= Number(depreciacion).toLocaleString('es-CO') %></strong>
+  <% if(depreciaciones > 0){ %>
+  <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted);">
+    <span style="padding-left:12px;">↳ de los cuales, depreciaciones de activos fijos</span>
+    <span>$<%= Number(depreciaciones).toLocaleString('es-CO') %></span>
   </div>
+  <% } %>
   <% if(gastosNoDeducibles > 0){ %>
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 12px;background:#FAECE7;border-radius:4px;font-size:13px;margin-top:4px;">
-    <span style="color:var(--amber);">⚠ Gastos sin soporte válido — NO deducibles (Caso A-02)</span>
+    <span style="color:var(--amber);">⚠ Gastos sin soporte válido — NO deducibles (excluidos de la casilla 63)</span>
     <strong style="color:var(--amber);">$<%= Number(gastosNoDeducibles).toLocaleString('es-CO') %></strong>
   </div>
   <% } %>
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 12px;background:var(--blue-light);border-radius:4px;margin-top:4px;font-size:14px;font-weight:600;">
     <span>Casilla 67 — Total costos y gastos deducibles</span>
-    <strong>$<%= Number(costos + gastoNomina + depreciacion).toLocaleString('es-CO') %></strong>
+    <strong>$<%= Number(costos + gastos).toLocaleString('es-CO') %></strong>
   </div>
 
   <div style="background:var(--blue-light);padding:6px 12px;border-radius:4px;font-size:12px;font-weight:600;color:var(--blue);margin:1rem 0 8px;text-transform:uppercase;">Determinación del impuesto</div>
@@ -62,24 +56,22 @@
     <span>Casilla 72 — Renta líquida ordinaria del ejercicio</span>
     <strong>$<%= Number(rentaLiquida).toLocaleString('es-CO') %></strong>
   </div>
-  <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;margin-top:8px;">
-    <span>Casilla 76 — Renta presuntiva (0% sobre patrimonio líquido — Art. 188 ET)</span>
-    <strong>$<%= Number(rentaPresuntiva).toLocaleString('es-CO') %></strong>
-  </div>
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 12px;background:var(--blue-light);border-radius:4px;margin-top:4px;font-size:14px;font-weight:600;">
-    <span>Casilla 79 — Renta líquida gravable (mayor entre 72 y 76)</span>
+    <span>Casilla 79 — Renta líquida gravable</span>
     <strong>$<%= Number(baseGravable).toLocaleString('es-CO') %></strong>
   </div>
+  <% if(rentaLiquida <= 0){ %>
+  <p style="font-size:12px;color:var(--muted);margin-top:6px;">
+    La renta líquida del ejercicio es cero o negativa, por lo que la base gravable es $0 y no se genera impuesto a cargo.
+    No se aplica renta presuntiva (eliminada por la Ley 2155 de 2021).
+  </p>
+  <% } %>
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;margin-top:8px;">
-    <span>Casilla 84 — Impuesto sobre renta líquida gravable (35%)</span>
+    <span>Casilla 84 — Impuesto sobre renta líquida gravable (<%= tarifaRenta %>%)</span>
     <strong>$<%= Number(impuesto).toLocaleString('es-CO') %></strong>
   </div>
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-    <span>Casilla 103 — Anticipo renta liquidado año anterior</span>
-    <strong style="color:var(--green)">($<%= Number(anticipo).toLocaleString('es-CO') %>)</strong>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-    <span>Casilla 107 — Total retenciones año gravable</span>
+    <span>Casilla 107 — Total retenciones año gravable a favor (cuenta 13551505)</span>
     <strong style="color:var(--green)">($<%= Number(retencionesSufridas).toLocaleString('es-CO') %>)</strong>
   </div>
   <% if(saldoPagar > 0){ %>

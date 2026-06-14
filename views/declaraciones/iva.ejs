@@ -1,46 +1,45 @@
 <%- include('../partials/header', {title: title}) %>
 <div class="page-header" style="display:flex;justify-content:space-between;">
   <div>
-    <h2>Formulario 300 — IVA Bimestre <%= bimestreNombre %> 2025</h2>
-    <p>Inversiones Uniatlantico S.A.S. &nbsp;|&nbsp; NIT: 900.123.456-7</p>
+    <h2>Formulario 300 — IVA Bimestre <%= bimestreNombre %> <%= anno %></h2>
+    <p>Inversiones Uniatlántico S.A.S. &nbsp;|&nbsp; NIT: 900.123.456-7</p>
   </div>
   <a href="/declaraciones" class="btn btn-secondary">Volver</a>
 </div>
 
 <div class="tip-box" style="background:#EBF5FB;border-left:4px solid #2E75B6;padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:1rem;">
-  Valores calculados del libro de transacciones. Para presentar oficialmente ve a <a href="<%= mokanataxUrl %>/declaraciones/iva/<%= bimestre %>" target="_blank" class="btn-link">MokanaTax → Form. 300</a>
+  Valores calculados directamente del Libro Diario (cuentas 24080505 — IVA generado, y 24081005 — IVA descontable).
+  Para presentar oficialmente ve a <a href="<%= mokanataxUrl %>/declaraciones/iva/<%= bimestre %>" target="_blank" class="btn-link">MokanaTax → Form. 300</a>
 </div>
 
 <div class="form-card">
   <div style="display:flex;align-items:center;gap:16px;padding:12px 16px;background:var(--blue);color:white;border-radius:8px;margin-bottom:1.5rem;">
     <div style="font-size:28px;font-weight:700;background:rgba(255,255,255,0.15);padding:8px 16px;border-radius:8px;">300</div>
     <div><strong>Declaración del Impuesto sobre las Ventas — IVA</strong><br>
-    <small>Bimestre: <%= bimestreNombre %> 2025 — NIT: 900.123.456-7 — Inversiones Uniatlantico S.A.S.</small></div>
-  </div>
-
-  <div style="background:var(--blue-light);padding:6px 12px;border-radius:4px;font-size:12px;font-weight:600;color:var(--blue);margin:1rem 0 8px;text-transform:uppercase;">Sección ingresos</div>
-  <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-    <span>Casilla 28 — Por operaciones gravadas a la tarifa general (19%)</span>
-    <strong>$<%= Number(ivaGenerado / 0.19).toLocaleString('es-CO') %></strong>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-    <span>Casilla 42 — Devoluciones en ventas (notas crédito)</span>
-    <strong style="color:var(--red)">($<%= Number(ivaDevoluciones).toLocaleString('es-CO') %>)</strong>
+    <small>Bimestre: <%= bimestreNombre %> <%= anno %> — NIT: 900.123.456-7 — Inversiones Uniatlántico S.A.S.</small></div>
   </div>
 
   <div style="background:var(--blue-light);padding:6px 12px;border-radius:4px;font-size:12px;font-weight:600;color:var(--blue);margin:1rem 0 8px;text-transform:uppercase;">Impuesto generado (Casilla 67)</div>
+  <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
+    <span>Casilla 28 — Por operaciones gravadas a la tarifa general (19%) — base estimada</span>
+    <strong>$<%= Number(baseGenerado).toLocaleString('es-CO') %></strong>
+  </div>
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
     <span>Casilla 59 — IVA generado a la tarifa general (19%)</span>
     <strong>$<%= Number(ivaGenerado).toLocaleString('es-CO') %></strong>
   </div>
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 12px;background:var(--blue-light);border-radius:4px;margin-top:8px;font-size:15px;font-weight:600;">
     <span>Total impuesto generado (Casilla 67)</span>
-    <strong>$<%= Number(ivaGeneradoNeto).toLocaleString('es-CO') %></strong>
+    <strong>$<%= Number(ivaGenerado).toLocaleString('es-CO') %></strong>
   </div>
 
   <div style="background:var(--blue-light);padding:6px 12px;border-radius:4px;font-size:12px;font-weight:600;color:var(--blue);margin:1rem 0 8px;text-transform:uppercase;">Impuesto descontable (Casilla 81)</div>
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-    <span>Casilla 72 — Por compras de bienes gravados a la tarifa general</span>
+    <span>Casilla 72 — Por compras de bienes gravados a la tarifa general — base estimada</span>
+    <strong>$<%= Number(baseDescontable).toLocaleString('es-CO') %></strong>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
+    <span>Casilla 72 — IVA descontable de compras gravadas (19%)</span>
     <strong>$<%= Number(ivaDescontable).toLocaleString('es-CO') %></strong>
   </div>
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 12px;background:var(--blue-light);border-radius:4px;margin-top:8px;font-size:15px;font-weight:600;">
