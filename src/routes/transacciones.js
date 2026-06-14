@@ -72,10 +72,11 @@ router.get('/nueva/form', requireAuth, setSchema, async (req, res) => {
   const nombreExpr = `CASE WHEN razon_social <> '' THEN razon_social
     ELSE TRIM(CONCAT(primer_nombre, ' ', segundo_nombre, ' ', primer_apellido, ' ', segundo_apellido)) END`;
 
-  const [clientesQ, proveedoresQ, cuentas] = await Promise.all([
+  const [clientesQ, proveedoresQ, cuentas, productos] = await Promise.all([
     pool.query(`SELECT *, ${nombreExpr} AS nombre FROM "${schema}".terceros WHERE activo = TRUE AND es_cliente = TRUE ORDER BY nombre`),
     pool.query(`SELECT *, ${nombreExpr} AS nombre FROM "${schema}".terceros WHERE activo = TRUE AND es_proveedor = TRUE ORDER BY nombre`),
     pool.query(`SELECT codigo, nombre, naturaleza FROM "${schema}".plan_cuentas WHERE activa = TRUE ORDER BY codigo`),
+    pool.query(`SELECT * FROM "${schema}".productos_servicios WHERE activo = TRUE ORDER BY codigo`),
   ]);
   const clientes = { rows: clientesQ.rows.map(c => ({ ...c, razon_social: c.nombre })) };
   const proveedores = { rows: proveedoresQ.rows.map(p => ({ ...p, razon_social: p.nombre })) };
@@ -92,6 +93,7 @@ router.get('/nueva/form', requireAuth, setSchema, async (req, res) => {
     clientes: clientes.rows,
     proveedores: proveedores.rows,
     cuentas: cuentas.rows,
+    productos: productos.rows,
     terceros,
     fuentesAsiento: FUENTES_ASIENTO,
     error: req.flash('error'),
@@ -100,19 +102,153 @@ router.get('/nueva/form', requireAuth, setSchema, async (req, res) => {
 
 router.post('/nueva', requireAuth, setSchema, async (req, res) => {
   const schema = req.schema;
-  const { documento, fecha, tipo, contraparte_nombre, concepto, subtotal, iva, retencion, tipo_iva } = req.body;
-  const total = parseInt(subtotal) + parseInt(iva) + parseInt(retencion);
+  const { documento, fecha, tipo, contraparte_nombre, concepto, subtotal, iva, retencion, tipo_iva, fuente } = req.body;
+  const total = parseInt(subtotal) + parseInt(iva) - parseInt(retencion || 0);
   const mes = new Date(fecha).getMonth() + 1;
+
+  // Líneas de ítems (catálogo de productos/servicios)
+  const productosCodigo = [].concat(req.body['lineas_producto[]'] || []);
+  const cantidades      = [].concat(req.body['lineas_cantidad[]'] || []);
+  const valores         = [].concat(req.body['lineas_valor[]'] || []);
+  const descuentosPct   = [].concat(req.body['lineas_descuento_pct[]'] || []);
+
+  const client = await pool.connect();
   try {
-    await pool.query(`
+    await client.query('BEGIN');
+
+    await client.query(`
       INSERT INTO "${schema}".transacciones
       (documento, fecha, tipo, contraparte_nombre, concepto, subtotal, iva, retencion, total, mes, anno, tipo_iva)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,2025,$11)
     `, [documento, fecha, tipo, contraparte_nombre, concepto, subtotal, iva, retencion, total, mes, tipo_iva]);
+
+    // ── Generación automática del asiento contable para Facturación electrónica de VENTA ──
+    if (fuente === 'FE-FV') {
+      // Construir líneas de ingreso/IVA/retención/costo a partir del catálogo
+      const lineasIngreso = []; // { cuenta, descripcion, valor }
+      const lineasIva = [];
+      const lineasCosto = []; // { cuentaCosto, cuentaInventario, descripcion, valor }
+      let totalRetencionCalc = 0;
+
+      for (let i = 0; i < productosCodigo.length; i++) {
+        const codigo = (productosCodigo[i] || '').trim();
+        if (!codigo) continue;
+        const cantidad = parseFloat(cantidades[i]) || 0;
+        const valorUnit = parseFloat(valores[i]) || 0;
+        const descPct = parseFloat(descuentosPct[i]) || 0;
+        if (cantidad <= 0 || valorUnit <= 0) continue;
+
+        const { rows: [prod] } = await client.query(
+          `SELECT * FROM "${schema}".productos_servicios WHERE codigo = $1`, [codigo]
+        );
+        if (!prod) {
+          throw new Error(`El producto/servicio "${codigo}" no existe en el catálogo.`);
+        }
+
+        const bruto = cantidad * valorUnit;
+        const descuento = bruto * (descPct / 100);
+        const subtotalLinea = Math.round(bruto - descuento);
+        const ivaLinea = Math.round(subtotalLinea * (Number(prod.tarifa_iva) / 100));
+        const retLinea = Math.round(subtotalLinea * (Number(prod.tarifa_retencion) / 100));
+        totalRetencionCalc += retLinea;
+
+        lineasIngreso.push({
+          cuenta: prod.cuenta_ingreso,
+          descripcion: `${documento} — ${prod.nombre} x${cantidad}`,
+          valor: subtotalLinea,
+        });
+        if (ivaLinea > 0) {
+          lineasIva.push({
+            cuenta: '24080505',
+            descripcion: `IVA generado ${prod.tarifa_iva}% — ${prod.nombre}`,
+            valor: ivaLinea,
+          });
+        }
+        if (prod.tipo === 'producto' && prod.cuenta_costo && prod.cuenta_inventario) {
+          const costoLinea = Math.round(Number(prod.costo_unitario) * cantidad);
+          if (costoLinea > 0) {
+            lineasCosto.push({
+              cuentaCosto: prod.cuenta_costo,
+              cuentaInventario: prod.cuenta_inventario,
+              descripcion: `Costo de venta — ${prod.nombre} x${cantidad}`,
+              valor: costoLinea,
+            });
+          }
+        }
+      }
+
+      if (lineasIngreso.length === 0) {
+        throw new Error('Debes seleccionar al menos un producto o servicio del catálogo en la factura.');
+      }
+
+      const totalIngreso = lineasIngreso.reduce((a, l) => a + l.valor, 0);
+      const totalIvaCalc = lineasIva.reduce((a, l) => a + l.valor, 0);
+      const totalCartera = totalIngreso + totalIvaCalc - totalRetencionCalc;
+
+      // Construir detalle del asiento
+      const detalle = [];
+      detalle.push({ cuenta: '13050505', descripcion: `Cartera ${documento} — ${contraparte_nombre}`, debito: totalCartera, credito: 0 });
+      if (totalRetencionCalc > 0) {
+        detalle.push({ cuenta: '13551505', descripcion: `Retención en la fuente a favor — ${documento}`, debito: totalRetencionCalc, credito: 0 });
+      }
+      for (const l of lineasIngreso) {
+        detalle.push({ cuenta: l.cuenta, descripcion: l.descripcion, debito: 0, credito: l.valor });
+      }
+      for (const l of lineasIva) {
+        detalle.push({ cuenta: l.cuenta, descripcion: l.descripcion, debito: 0, credito: l.valor });
+      }
+      for (const l of lineasCosto) {
+        detalle.push({ cuenta: l.cuentaCosto, descripcion: l.descripcion, debito: l.valor, credito: 0 });
+        detalle.push({ cuenta: l.cuentaInventario, descripcion: l.descripcion, debito: 0, credito: l.valor });
+      }
+
+      // Verificar partida doble
+      const totD = detalle.reduce((a, d) => a + d.debito, 0);
+      const totC = detalle.reduce((a, d) => a + d.credito, 0);
+      if (Math.abs(totD - totC) > 1) {
+        throw new Error(`El asiento generado no cuadra (Débitos: ${totD.toLocaleString('es-CO')}, Créditos: ${totC.toLocaleString('es-CO')}).`);
+      }
+
+      // Verificar que todas las cuentas existan
+      const codigosUnicos = [...new Set(detalle.map(d => d.cuenta))];
+      const { rows: cuentasValidas } = await client.query(
+        `SELECT codigo FROM "${schema}".plan_cuentas WHERE codigo = ANY($1)`, [codigosUnicos]
+      );
+      const codigosValidos = new Set(cuentasValidas.map(c => c.codigo));
+      const faltantes = codigosUnicos.filter(c => !codigosValidos.has(c));
+      if (faltantes.length > 0) {
+        throw new Error(`Las siguientes cuentas no existen en el plan de cuentas: ${faltantes.join(', ')}.`);
+      }
+
+      const { rows: [asiento] } = await client.query(
+        `INSERT INTO "${schema}".asientos
+          (fecha, numero_comprobante, tipo_comprobante, concepto, documento_soporte, contraparte, estado)
+         VALUES ($1,$2,'Factura de venta',$3,$4,$5,'aprobado')
+         RETURNING id`,
+        [fecha, documento, concepto || `Factura de venta ${documento}`, documento, contraparte_nombre]
+      );
+
+      for (const d of detalle) {
+        await client.query(
+          `INSERT INTO "${schema}".asientos_detalle (asiento_id, cuenta_codigo, descripcion, debito, credito)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [asiento.id, d.cuenta, d.descripcion, d.debito, d.credito]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    if (fuente === 'FE-FV') {
+      req.flash('success', `Factura ${documento} guardada y contabilizada automáticamente.`);
+      return res.redirect('/contabilidad/libro-diario');
+    }
     res.redirect('/transacciones');
   } catch (err) {
+    await client.query('ROLLBACK');
     req.flash('error', 'Error al guardar la transacción: ' + err.message);
     res.redirect('/transacciones/nueva/form');
+  } finally {
+    client.release();
   }
 });
 

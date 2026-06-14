@@ -701,4 +701,92 @@ router.post('/terceros/:codigo/toggle', requireAuth, async (req, res) => {
   res.redirect('/contabilidad/terceros');
 });
 
+// ═════════════════════════════════════════════════════════════════════════
+// PRODUCTOS Y SERVICIOS — catálogo vinculado a cuentas contables
+// ═════════════════════════════════════════════════════════════════════════
+router.get('/productos', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  try {
+    const [productos, cuentas] = await Promise.all([
+      pool.query(`SELECT * FROM ${s}.productos_servicios ORDER BY codigo`),
+      pool.query(`SELECT codigo, nombre FROM ${s}.plan_cuentas WHERE activa = TRUE ORDER BY codigo`),
+    ]);
+    res.render('contabilidad/productos', {
+      title: 'Productos y Servicios — Quipusoft',
+      user: req.user,
+      productos: productos.rows,
+      cuentas: cuentas.rows,
+      error: req.flash('error'),
+      success: req.flash('success'),
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Error: ' + e.message);
+    res.redirect('/contabilidad');
+  }
+});
+
+router.post('/productos', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  const {
+    codigo, nombre, tipo, cuenta_ingreso, cuenta_costo, cuenta_inventario,
+    costo_unitario, precio_venta, tarifa_iva, tarifa_retencion, concepto_retencion,
+  } = req.body;
+
+  if (!codigo || !nombre || !tipo || !cuenta_ingreso) {
+    req.flash('error', 'Código, nombre, tipo y cuenta de ingreso son obligatorios.');
+    return res.redirect('/contabilidad/productos');
+  }
+  if (tipo === 'producto' && (!cuenta_costo || !cuenta_inventario)) {
+    req.flash('error', 'Los productos requieren cuenta de costo y cuenta de inventario.');
+    return res.redirect('/contabilidad/productos');
+  }
+
+  try {
+    const codigosCuenta = [cuenta_ingreso, cuenta_costo, cuenta_inventario].filter(Boolean);
+    const { rows: validas } = await pool.query(
+      `SELECT codigo FROM ${s}.plan_cuentas WHERE codigo = ANY($1)`, [codigosCuenta]
+    );
+    const validasSet = new Set(validas.map(c => c.codigo));
+    const faltantes = codigosCuenta.filter(c => !validasSet.has(c));
+    if (faltantes.length > 0) {
+      req.flash('error', `Las siguientes cuentas no existen: ${faltantes.join(', ')}.`);
+      return res.redirect('/contabilidad/productos');
+    }
+
+    await pool.query(
+      `INSERT INTO ${s}.productos_servicios
+        (codigo, nombre, tipo, cuenta_ingreso, cuenta_costo, cuenta_inventario,
+         costo_unitario, precio_venta, tarifa_iva, tarifa_retencion, concepto_retencion)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       ON CONFLICT (codigo) DO UPDATE SET
+         nombre = EXCLUDED.nombre, tipo = EXCLUDED.tipo, cuenta_ingreso = EXCLUDED.cuenta_ingreso,
+         cuenta_costo = EXCLUDED.cuenta_costo, cuenta_inventario = EXCLUDED.cuenta_inventario,
+         costo_unitario = EXCLUDED.costo_unitario, precio_venta = EXCLUDED.precio_venta,
+         tarifa_iva = EXCLUDED.tarifa_iva, tarifa_retencion = EXCLUDED.tarifa_retencion,
+         concepto_retencion = EXCLUDED.concepto_retencion`,
+      [codigo, nombre, tipo, cuenta_ingreso, cuenta_costo || null, cuenta_inventario || null,
+       parseInt(costo_unitario) || 0, parseInt(precio_venta) || 0,
+       parseFloat(tarifa_iva) || 0, parseFloat(tarifa_retencion) || 0, concepto_retencion || null]
+    );
+    req.flash('success', `Producto/servicio ${codigo} guardado correctamente.`);
+    res.redirect('/contabilidad/productos');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Error al guardar: ' + e.message);
+    res.redirect('/contabilidad/productos');
+  }
+});
+
+router.post('/productos/:codigo/toggle', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  try {
+    await pool.query(`UPDATE ${s}.productos_servicios SET activo = NOT activo WHERE codigo = $1`, [req.params.codigo]);
+    req.flash('success', `Estado de ${req.params.codigo} actualizado.`);
+  } catch (e) {
+    req.flash('error', 'Error: ' + e.message);
+  }
+  res.redirect('/contabilidad/productos');
+});
+
 module.exports = router;

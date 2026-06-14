@@ -373,9 +373,9 @@
         </div>
       </div>
       <div class="erp-form-field">
-        <label>Retención (valor negativo en cartera)</label>
+        <label>Retención calculada (a favor)</label>
         <div class="erp-field-wrap">
-          <input class="erp-input text-right" type="number" id="retencion" name="retencion" placeholder="0" value="0">
+          <input class="erp-input text-right" type="number" id="retencion" name="retencion" placeholder="0" value="0" readonly style="background:var(--gray);">
         </div>
       </div>
       <div class="erp-form-field">
@@ -405,6 +405,13 @@
 </datalist>
 
 <script>
+const PRODUCTOS_CATALOGO = <%- JSON.stringify(productos.map(p => ({
+  codigo: p.codigo,
+  nombre: p.nombre,
+  precio_venta: Number(p.precio_venta),
+  tarifa_iva: Number(p.tarifa_iva),
+  tarifa_retencion: Number(p.tarifa_retencion),
+}))) %>;
 (function() {
   // ═══════════════════════════════════════════════════════════════════
   // SELECTOR DE TIPO DE DOCUMENTO
@@ -545,30 +552,36 @@
   // FORMULARIO B — FACTURACIÓN (ítems con cálculo de IVA)
   // ═══════════════════════════════════════════════════════════════════
   const tbody = document.getElementById('items-body');
-  const tipoIvaInput = document.getElementById('tipo_iva');
-
-  function tarifaIva() {
-    return tipoIvaInput.value === 'gravado' ? 0.19 : 0;
-  }
 
   function nuevaFilaFactura() {
     const tr = document.createElement('tr');
+    let opcionesProductos = '<option value="">Seleccione...</option>';
+    PRODUCTOS_CATALOGO.forEach(function(p) {
+      opcionesProductos += '<option value="' + p.codigo + '" data-precio="' + p.precio_venta + '" data-iva="' + p.tarifa_iva + '" data-retencion="' + p.tarifa_retencion + '">' + p.codigo + ' — ' + p.nombre + '</option>';
+    });
     tr.innerHTML = `
-      <td><input type="text" class="erp-cell-input item-desc" placeholder="Escriba palabra clave y seleccione"></td>
-      <td class="c"><input type="number" class="erp-cell-input item-cant text-right" value="1" min="0" step="1"></td>
-      <td><input type="number" class="erp-cell-input item-valor text-right" value="0" min="0" step="1"></td>
-      <td><input type="number" class="erp-cell-input item-desc-pct text-right" value="0" min="0" max="100" step="0.01" title="Descuento %"></td>
-      <td class="c">
-        <select class="erp-cell-select item-impuesto">
-          <option value="19" ` + (tarifaIva()===0.19?'selected':'') + `>IVA 19%</option>
-          <option value="0" ` + (tarifaIva()===0?'selected':'') + `>0% (Exento/Excluido)</option>
-        </select>
+      <td>
+        <select class="erp-cell-select item-producto" name="lineas_producto[]">` + opcionesProductos + `</select>
       </td>
+      <td class="c"><input type="number" class="erp-cell-input item-cant text-right" name="lineas_cantidad[]" value="1" min="0" step="1"></td>
+      <td><input type="number" class="erp-cell-input item-valor text-right" name="lineas_valor[]" value="0" min="0" step="1"></td>
+      <td><input type="number" class="erp-cell-input item-desc-pct text-right" name="lineas_descuento_pct[]" value="0" min="0" max="100" step="0.01" title="Descuento %"></td>
+      <td class="c item-impuesto-label">19%</td>
       <td class="r item-subtotal">0</td>
       <td><button type="button" class="erp-row-remove" title="Eliminar línea">✕</button></td>
     `;
     tbody.appendChild(tr);
-    tr.querySelectorAll('input,select').forEach(function(el) { el.addEventListener('input', recalcularFactura); });
+    tr.querySelector('.item-producto').addEventListener('change', function() {
+      const opt = this.selectedOptions[0];
+      const precio = parseFloat(opt.dataset.precio) || 0;
+      const ivaTarifa = parseFloat(opt.dataset.iva) || 0;
+      tr.querySelector('.item-valor').value = precio;
+      tr.querySelector('.item-impuesto-label').textContent = ivaTarifa + '%';
+      tr.dataset.tarifaIva = ivaTarifa;
+      tr.dataset.tarifaRetencion = opt.dataset.retencion || 0;
+      recalcularFactura();
+    });
+    tr.querySelectorAll('input').forEach(function(el) { el.addEventListener('input', recalcularFactura); });
     tr.querySelector('.erp-row-remove').addEventListener('click', function() { tr.remove(); recalcularFactura(); });
     recalcularFactura();
   }
@@ -580,22 +593,25 @@
   function recalcularFactura() {
     let totalSubtotal = 0;
     let totalIva = 0;
+    let totalRetencion = 0;
     tbody.querySelectorAll('tr').forEach(function(tr) {
       const cant = parseFloat(tr.querySelector('.item-cant').value) || 0;
       const valor = parseFloat(tr.querySelector('.item-valor').value) || 0;
       const descPct = parseFloat(tr.querySelector('.item-desc-pct').value) || 0;
-      const tarifaImp = parseFloat(tr.querySelector('.item-impuesto').value) || 0;
+      const tarifaImp = parseFloat(tr.dataset.tarifaIva) || 0;
+      const tarifaRet = parseFloat(tr.dataset.tarifaRetencion) || 0;
       const bruto = cant * valor;
       const descuento = bruto * (descPct / 100);
       const subtotalLinea = bruto - descuento;
       const ivaLinea = subtotalLinea * (tarifaImp / 100);
+      const retLinea = subtotalLinea * (tarifaRet / 100);
       tr.querySelector('.item-subtotal').textContent = fmt(subtotalLinea);
       totalSubtotal += subtotalLinea;
       totalIva += ivaLinea;
+      totalRetencion += retLinea;
     });
 
-    const retencion = parseFloat(document.getElementById('retencion').value) || 0;
-    const totalGeneral = totalSubtotal + totalIva + retencion;
+    const totalGeneral = totalSubtotal + totalIva - totalRetencion;
 
     document.getElementById('total-subtotal').textContent = fmt(totalSubtotal);
     document.getElementById('total-iva').textContent = fmt(totalIva);
@@ -604,6 +620,7 @@
 
     document.getElementById('subtotal_hidden').value = Math.round(totalSubtotal);
     document.getElementById('iva_hidden').value = Math.round(totalIva);
+    document.getElementById('retencion').value = Math.round(totalRetencion);
   }
 
   document.getElementById('btn-agregar-linea').addEventListener('click', nuevaFilaFactura);
