@@ -237,9 +237,104 @@ router.post('/nueva', requireAuth, setSchema, async (req, res) => {
       }
     }
 
+    // ── Generación automática del asiento contable para Facturación electrónica de COMPRA ──
+    if (fuente === 'FE-FC') {
+      // Las compras solo aplican a PRODUCTOS del catálogo (reponen inventario al costo_unitario)
+      const lineasInventario = []; // { cuenta, descripcion, valor }
+      let totalSubtotal = 0;
+      let totalIvaCalc = 0;
+      let totalRetencionCalc = 0;
+
+      for (let i = 0; i < productosCodigo.length; i++) {
+        const codigo = (productosCodigo[i] || '').trim();
+        if (!codigo) continue;
+        const cantidad = parseFloat(cantidades[i]) || 0;
+        if (cantidad <= 0) continue;
+
+        const { rows: [prod] } = await client.query(
+          `SELECT * FROM "${schema}".productos_servicios WHERE codigo = $1`, [codigo]
+        );
+        if (!prod) {
+          throw new Error(`El producto "${codigo}" no existe en el catálogo.`);
+        }
+        if (prod.tipo !== 'producto' || !prod.cuenta_inventario) {
+          throw new Error(`"${prod.nombre}" no es un producto con inventario; las facturas de compra solo admiten productos del catálogo.`);
+        }
+
+        const subtotalLinea = Math.round(Number(prod.costo_unitario) * cantidad);
+        const ivaLinea = Math.round(subtotalLinea * (Number(prod.tarifa_iva) / 100));
+        const retLinea = Math.round(subtotalLinea * (Number(prod.tarifa_retencion) / 100));
+
+        lineasInventario.push({
+          cuenta: prod.cuenta_inventario,
+          descripcion: `${documento} — Compra ${prod.nombre} x${cantidad}`,
+          valor: subtotalLinea,
+        });
+        totalSubtotal += subtotalLinea;
+        totalIvaCalc += ivaLinea;
+        totalRetencionCalc += retLinea;
+      }
+
+      if (lineasInventario.length === 0) {
+        throw new Error('Debes seleccionar al menos un producto del catálogo en la factura de compra.');
+      }
+
+      const totalProveedor = totalSubtotal + totalIvaCalc - totalRetencionCalc;
+
+      const detalleFC = [];
+      for (const l of lineasInventario) {
+        detalleFC.push({ cuenta: l.cuenta, descripcion: l.descripcion, debito: l.valor, credito: 0 });
+      }
+      if (totalIvaCalc > 0) {
+        detalleFC.push({ cuenta: '24081005', descripcion: `IVA descontable 19% — ${documento}`, debito: totalIvaCalc, credito: 0 });
+      }
+      if (totalRetencionCalc > 0) {
+        detalleFC.push({ cuenta: '23654005', descripcion: `Retención en la fuente por compras — ${documento}`, debito: 0, credito: totalRetencionCalc });
+      }
+      detalleFC.push({ cuenta: '22050505', descripcion: `Proveedores — ${documento} — ${contraparte_nombre}`, debito: 0, credito: totalProveedor });
+
+      // Verificar partida doble
+      const totD = detalleFC.reduce((a, d) => a + d.debito, 0);
+      const totC = detalleFC.reduce((a, d) => a + d.credito, 0);
+      if (Math.abs(totD - totC) > 1) {
+        throw new Error(`El asiento generado no cuadra (Débitos: ${totD.toLocaleString('es-CO')}, Créditos: ${totC.toLocaleString('es-CO')}).`);
+      }
+
+      // Verificar que todas las cuentas existan
+      const codigosUnicosFC = [...new Set(detalleFC.map(d => d.cuenta))];
+      const { rows: cuentasValidasFC } = await client.query(
+        `SELECT codigo FROM "${schema}".plan_cuentas WHERE codigo = ANY($1)`, [codigosUnicosFC]
+      );
+      const codigosValidosFC = new Set(cuentasValidasFC.map(c => c.codigo));
+      const faltantesFC = codigosUnicosFC.filter(c => !codigosValidosFC.has(c));
+      if (faltantesFC.length > 0) {
+        throw new Error(`Las siguientes cuentas no existen en el plan de cuentas: ${faltantesFC.join(', ')}.`);
+      }
+
+      const { rows: [asientoFC] } = await client.query(
+        `INSERT INTO "${schema}".asientos
+          (fecha, numero_comprobante, tipo_comprobante, concepto, documento_soporte, contraparte, estado)
+         VALUES ($1,$2,'Factura de compra',$3,$4,$5,'aprobado')
+         RETURNING id`,
+        [fecha, documento, concepto || `Factura de compra ${documento}`, documento, contraparte_nombre]
+      );
+
+      for (const d of detalleFC) {
+        await client.query(
+          `INSERT INTO "${schema}".asientos_detalle (asiento_id, cuenta_codigo, descripcion, debito, credito)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [asientoFC.id, d.cuenta, d.descripcion, d.debito, d.credito]
+        );
+      }
+    }
+
     await client.query('COMMIT');
     if (fuente === 'FE-FV') {
       req.flash('success', `Factura ${documento} guardada y contabilizada automáticamente.`);
+      return res.redirect('/contabilidad/libro-diario');
+    }
+    if (fuente === 'FE-FC') {
+      req.flash('success', `Factura de compra ${documento} guardada y contabilizada automáticamente.`);
       return res.redirect('/contabilidad/libro-diario');
     }
     res.redirect('/transacciones');

@@ -408,7 +408,9 @@
 const PRODUCTOS_CATALOGO = <%- JSON.stringify(productos.map(p => ({
   codigo: p.codigo,
   nombre: p.nombre,
+  tipo: p.tipo,
   precio_venta: Number(p.precio_venta),
+  costo_unitario: Number(p.costo_unitario),
   tarifa_iva: Number(p.tarifa_iva),
   tarifa_retencion: Number(p.tarifa_retencion),
 }))) %>;
@@ -438,6 +440,8 @@ const PRODUCTOS_CATALOGO = <%- JSON.stringify(productos.map(p => ({
     }
   }
 
+  let modoFactura = 'FV';
+
   selector.addEventListener('change', function() {
     const val = selector.value;
     formAsiento.style.display = 'none';
@@ -445,9 +449,16 @@ const PRODUCTOS_CATALOGO = <%- JSON.stringify(productos.map(p => ({
 
     if (val === 'FV' || val === 'FC') {
       formFactura.style.display = '';
+      modoFactura = val;
       document.getElementById('factura-fuente-select').value = val === 'FV' ? 'FE-FV' : 'FE-FC';
       document.getElementById('tipo').value = val === 'FV' ? 'Factura venta' : 'Factura compra';
       document.getElementById('tipo_iva').value = val === 'FV' ? 'gravado' : 'gravado';
+      document.getElementById('contraparte_nombre').placeholder = val === 'FV'
+        ? 'Escriba el nombre del CLIENTE y selecciónelo del listado'
+        : 'Escriba el nombre del PROVEEDOR y selecciónelo del listado';
+      // Reconstruir filas de items con el catálogo correspondiente (productos en FC, todo en FV)
+      while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+      nuevaFilaFactura();
     } else if (val === 'CE' || val === 'CR' || val === 'NC') {
       formAsiento.style.display = '';
       document.getElementById('asiento-fuente').value = val;
@@ -555,16 +566,19 @@ const PRODUCTOS_CATALOGO = <%- JSON.stringify(productos.map(p => ({
 
   function nuevaFilaFactura() {
     const tr = document.createElement('tr');
+    const catalogo = modoFactura === 'FC' ? PRODUCTOS_CATALOGO.filter(function(p){ return p.tipo === 'producto'; }) : PRODUCTOS_CATALOGO;
     let opcionesProductos = '<option value="">Seleccione...</option>';
-    PRODUCTOS_CATALOGO.forEach(function(p) {
-      opcionesProductos += '<option value="' + p.codigo + '" data-precio="' + p.precio_venta + '" data-iva="' + p.tarifa_iva + '" data-retencion="' + p.tarifa_retencion + '">' + p.codigo + ' — ' + p.nombre + '</option>';
+    catalogo.forEach(function(p) {
+      const precio = modoFactura === 'FC' ? p.costo_unitario : p.precio_venta;
+      opcionesProductos += '<option value="' + p.codigo + '" data-precio="' + precio + '" data-iva="' + p.tarifa_iva + '" data-retencion="' + p.tarifa_retencion + '">' + p.codigo + ' — ' + p.nombre + '</option>';
     });
+    const valorReadonly = modoFactura === 'FC' ? 'readonly style="background:var(--gray);"' : '';
     tr.innerHTML = `
       <td>
         <select class="erp-cell-select item-producto" name="lineas_producto[]">` + opcionesProductos + `</select>
       </td>
       <td class="c"><input type="number" class="erp-cell-input item-cant text-right" name="lineas_cantidad[]" value="1" min="0" step="1"></td>
-      <td><input type="number" class="erp-cell-input item-valor text-right" name="lineas_valor[]" value="0" min="0" step="1"></td>
+      <td><input type="number" class="erp-cell-input item-valor text-right" name="lineas_valor[]" value="0" min="0" step="1" ` + valorReadonly + `></td>
       <td><input type="number" class="erp-cell-input item-desc-pct text-right" name="lineas_descuento_pct[]" value="0" min="0" max="100" step="0.01" title="Descuento %"></td>
       <td class="c item-impuesto-label">19%</td>
       <td class="r item-subtotal">0</td>
