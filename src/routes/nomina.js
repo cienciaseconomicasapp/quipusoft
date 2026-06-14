@@ -3,11 +3,11 @@ const router = express.Router();
 const pool = require('../config/database');
 const { requireAuth, setSchema } = require('../middleware/auth');
 
-// Constantes 2025
-const SMMLV_2025 = 1423500;
-const AUX_TRANSPORTE_2025 = 200000;
-const UVT_2025 = 49799;
-const TOPE_95UVT = 95 * UVT_2025; // $4.730.905 — base retención por salarios
+// Constantes 2026
+const SMMLV_2026 = 1750905;
+const AUX_TRANSPORTE_2026 = 249095;
+const UVT_2026 = 52374;
+const TOPE_95UVT = 95 * UVT_2026; // $4.975.530 — base retención por salarios
 
 router.get('/', requireAuth, setSchema, async (req, res) => {
   const schema = req.schema;
@@ -38,8 +38,8 @@ router.get('/', requireAuth, setSchema, async (req, res) => {
       mes,
       totalNomina,
       totalCostoEmpresa,
-      SMMLV_2025,
-      UVT_2025,
+      SMMLV_2026,
+      UVT_2026,
     });
   } catch (err) {
     console.error(err);
@@ -114,19 +114,19 @@ router.get('/documento/:empleadoId/:mes', requireAuth, setSchema, async (req, re
 
 function calcularNomina(emp, mes) {
   const salario = emp.salario_basico;
-  const aux = salario <= (2 * SMMLV_2025) ? emp.auxilio_transporte : 0;
+  const aux = salario <= (2 * SMMLV_2026) ? emp.auxilio_transporte : 0;
   const devengado = salario + aux;
 
   // Descuentos empleado
   const descSalud = Math.round(salario * 0.04);
   const descPension = Math.round(salario * 0.04);
-  // Retención por salarios: solo si salario > 95 UVT ($4.730.905)
+  // Retención por salarios: solo si salario > 95 UVT ($4.975.530)
   const retencion = salario > TOPE_95UVT ? Math.round((salario - TOPE_95UVT) * 0.19) : 0;
   const deducciones = descSalud + descPension + retencion;
   const neto = devengado - deducciones;
 
   // Aportes empleador (S.A.S. — exonerada Art. 114-1 ET de salud, SENA, ICBF para < 10 SMMLV)
-  const aporteSalud = salario < (10 * SMMLV_2025) ? 0 : Math.round(salario * 0.085);
+  const aporteSalud = salario < (10 * SMMLV_2026) ? 0 : Math.round(salario * 0.085);
   const aportePension = Math.round(salario * 0.12);
   const aporteArl = Math.round(salario * (emp.porcentaje_arl / 100));
   const costoTotal = devengado + aporteSalud + aportePension + aporteArl;

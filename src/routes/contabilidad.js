@@ -55,8 +55,8 @@ router.get('/plan-cuentas', requireAuth, async (req, res) => {
 router.get('/libro-diario', requireAuth, async (req, res) => {
   const s = schema(req.user.id);
   const { desde, hasta, cuenta } = req.query;
-  const fechaDesde = desde || '2025-01-01';
-  const fechaHasta = hasta || '2025-12-31';
+  const fechaDesde = desde || '2026-01-01';
+  const fechaHasta = hasta || '2026-12-31';
 
   try {
     let whereClause = `a.fecha BETWEEN $1 AND $2`;
@@ -121,8 +121,8 @@ router.get('/libro-diario', requireAuth, async (req, res) => {
 router.get('/libro-mayor', requireAuth, async (req, res) => {
   const s = schema(req.user.id);
   const { desde, hasta, cuenta } = req.query;
-  const fechaDesde = desde || '2025-01-01';
-  const fechaHasta = hasta || '2025-12-31';
+  const fechaDesde = desde || '2026-01-01';
+  const fechaHasta = hasta || '2026-12-31';
   const cuentaFiltro = cuenta || '';
 
   try {
@@ -188,8 +188,8 @@ router.get('/libro-mayor', requireAuth, async (req, res) => {
 router.get('/libro-auxiliar', requireAuth, async (req, res) => {
   const s = schema(req.user.id);
   const { desde, hasta, cuenta } = req.query;
-  const fechaDesde = desde || '2025-01-01';
-  const fechaHasta = hasta || '2025-12-31';
+  const fechaDesde = desde || '2026-01-01';
+  const fechaHasta = hasta || '2026-12-31';
   const cuentaFiltro = cuenta || '1105';
 
   try {
@@ -263,7 +263,7 @@ router.get('/libro-auxiliar', requireAuth, async (req, res) => {
 router.get('/balance-comprobacion', requireAuth, async (req, res) => {
   const s = schema(req.user.id);
   const { hasta } = req.query;
-  const fechaHasta = hasta || '2025-12-31';
+  const fechaHasta = hasta || '2026-12-31';
 
   try {
     const { rows } = await pool.query(`
@@ -308,7 +308,7 @@ router.get('/balance-comprobacion', requireAuth, async (req, res) => {
 router.get('/estado-situacion', requireAuth, async (req, res) => {
   const s = schema(req.user.id);
   const { hasta } = req.query;
-  const fechaHasta = hasta || '2025-12-31';
+  const fechaHasta = hasta || '2026-12-31';
 
   try {
     const { rows } = await pool.query(`
@@ -384,8 +384,8 @@ router.get('/estado-situacion', requireAuth, async (req, res) => {
 router.get('/estado-resultados', requireAuth, async (req, res) => {
   const s = schema(req.user.id);
   const { desde, hasta } = req.query;
-  const fechaDesde = desde || '2025-01-01';
-  const fechaHasta = hasta || '2025-12-31';
+  const fechaDesde = desde || '2026-01-01';
+  const fechaHasta = hasta || '2026-12-31';
 
   try {
     const { rows } = await pool.query(`

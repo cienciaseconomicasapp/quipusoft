@@ -3,7 +3,7 @@
 function n(v){ return parseInt(v)||0; }
 function fmt(v){ return '$'+n(v).toLocaleString('es-CO'); }
 const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const SMMLV=1423500, AUX=202050, UVT=49799;
+const SMMLV=1750905, AUX=249095, UVT=52374;
 // Recalcular devengado correctamente (salario + auxilio, sin acumular erróneamente la BD)
 const totDev  = nomina.reduce((a,x)=>a+n(x.salario_basico)+n(x.auxilio_transporte),0);
 const totSal  = nomina.reduce((a,x)=>a+n(x.descuento_salud),0);
@@ -71,7 +71,7 @@ const totCost  = nomina.reduce((a,x)=>a+n(x.salario_basico)+n(x.auxilio_transpor
   <div class="kpi"><div class="kpi-lbl">Total neto a pagar</div><div class="kpi-val g"><%= fmt(totNeto) %></div></div>
   <div class="kpi"><div class="kpi-lbl">Costo total empresa</div><div class="kpi-val r"><%= fmt(totCost) %></div></div>
   <div class="kpi"><div class="kpi-lbl">Empleados activos</div><div class="kpi-val b"><%= nomina.length %></div></div>
-  <div class="kpi"><div class="kpi-lbl">UVT 2025 · Tope ret. 95 UVT</div><div class="kpi-val" style="font-size:14px;color:#555;">$<%= UVT.toLocaleString('es-CO') %> · $<%= (95*UVT).toLocaleString('es-CO') %></div></div>
+  <div class="kpi"><div class="kpi-lbl">UVT 2026 · Tope ret. 95 UVT</div><div class="kpi-val" style="font-size:14px;color:#555;">$<%= UVT.toLocaleString('es-CO') %> · $<%= (95*UVT).toLocaleString('es-CO') %></div></div>
 </div>
 
 <div class="alerta">

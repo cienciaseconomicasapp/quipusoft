@@ -58,6 +58,15 @@ async function crearSchemaContable(userId) {
       )
     `);
 
+    // ── Limpieza de cuentas obsoletas de versiones anteriores del plan de cuentas ──
+    // 2367* fue renombrado a 2365* (Retención en la fuente — compras ahora es 236540)
+    // 240801 fue renombrado/reubicado a 240405 (Impuesto de renta por pagar, bajo 2404)
+    const CODIGOS_OBSOLETOS = ['2367', '236705', '236710', '236715', '236720', '236725', '240801'];
+    await client.query(
+      `DELETE FROM ${s}.plan_cuentas WHERE codigo = ANY($1)`,
+      [CODIGOS_OBSOLETOS]
+    );
+
     for (const [codigo, nombre, naturaleza, tipo, padre] of PLAN_CUENTAS_PUC) {
       await client.query(
         `INSERT INTO ${s}.plan_cuentas (codigo, nombre, naturaleza, tipo, padre)
