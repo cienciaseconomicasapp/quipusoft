@@ -52,61 +52,85 @@ router.get('/plan-cuentas', requireAuth, async (req, res) => {
 });
 
 // ── GET /contabilidad/libro-diario ─────────────────────────────────────────
+// El libro diario totaliza por TIPO DE DOCUMENTO (fuente) en el rango de fechas.
+// No muestra asiento por asiento, sino el resumen agrupado por tipo_comprobante,
+// con los totales de débito/crédito y desglose por nivel de cuentas (clase/grupo/cuenta/subcuenta/auxiliar).
 router.get('/libro-diario', requireAuth, async (req, res) => {
   const s = schema(req.user.id);
-  const { desde, hasta, cuenta } = req.query;
+  const { desde, hasta, nivel } = req.query;
   const fechaDesde = desde || '2026-01-01';
   const fechaHasta = hasta || '2026-12-31';
+  const nivelFiltro = nivel || 'auxiliar'; // clase|grupo|cuenta|subcuenta|auxiliar
+
+  // Longitud de código según nivel
+  const nivelLen = { clase: 1, grupo: 2, cuenta: 4, subcuenta: 6, auxiliar: 8 };
+  const codLen = nivelLen[nivelFiltro] || 8;
 
   try {
-    let whereClause = `a.fecha BETWEEN $1 AND $2`;
-    let params = [fechaDesde, fechaHasta];
-
-    if (cuenta) {
-      whereClause += ` AND (ad.cuenta_codigo LIKE $3 OR ad.cuenta_codigo = $3)`;
-      params.push(cuenta + '%');
-    }
-
-    const { rows: asientos } = await pool.query(`
+    // Totalizar por tipo_comprobante × cuenta (truncada al nivel seleccionado)
+    const { rows } = await pool.query(`
       SELECT
-        a.id, a.fecha, a.numero_comprobante, a.tipo_comprobante,
-        a.concepto, a.documento_soporte, a.contraparte,
-        json_agg(
-          json_build_object(
-            'id', ad.id,
-            'cuenta_codigo', ad.cuenta_codigo,
-            'cuenta_nombre', pc.nombre,
-            'naturaleza', pc.naturaleza,
-            'descripcion', ad.descripcion,
-            'debito', ad.debito,
-            'credito', ad.credito
-          ) ORDER BY ad.id
-        ) AS detalles,
-        SUM(ad.debito) AS total_debito,
-        SUM(ad.credito) AS total_credito
+        a.tipo_comprobante,
+        COUNT(DISTINCT a.id)                              AS num_documentos,
+        MIN(a.fecha)                                      AS fecha_desde,
+        MAX(a.fecha)                                      AS fecha_hasta,
+        LEFT(ad.cuenta_codigo, $3)                        AS cuenta_nivel,
+        MAX(pc.nombre)                                    AS cuenta_nombre,
+        COALESCE(SUM(ad.debito), 0)                       AS total_debito,
+        COALESCE(SUM(ad.credito), 0)                      AS total_credito
       FROM ${s}.asientos a
       JOIN ${s}.asientos_detalle ad ON ad.asiento_id = a.id
-      JOIN ${s}.plan_cuentas pc ON pc.codigo = ad.cuenta_codigo
-      ${cuenta ? 'WHERE a.id IN (SELECT DISTINCT asiento_id FROM ' + s + '.asientos_detalle WHERE cuenta_codigo LIKE $3)' : ''}
+      LEFT JOIN ${s}.plan_cuentas pc ON pc.codigo = LEFT(ad.cuenta_codigo, $3)
       WHERE a.fecha BETWEEN $1 AND $2
-      GROUP BY a.id, a.fecha, a.numero_comprobante, a.tipo_comprobante, a.concepto, a.documento_soporte, a.contraparte
-      ORDER BY a.fecha, a.numero_comprobante
-    `, params);
+        AND LENGTH(ad.cuenta_codigo) >= $3
+      GROUP BY a.tipo_comprobante, LEFT(ad.cuenta_codigo, $3)
+      ORDER BY a.tipo_comprobante, LEFT(ad.cuenta_codigo, $3)
+    `, [fechaDesde, fechaHasta, codLen]);
+
+    // Agrupar por tipo_comprobante
+    const porTipo = {};
+    for (const r of rows) {
+      if (!porTipo[r.tipo_comprobante]) {
+        porTipo[r.tipo_comprobante] = {
+          tipo: r.tipo_comprobante,
+          num_documentos: Number(r.num_documentos),
+          fecha_desde: r.fecha_desde,
+          fecha_hasta: r.fecha_hasta,
+          cuentas: [],
+          total_debito: 0,
+          total_credito: 0,
+        };
+      }
+      const deb = Number(r.total_debito);
+      const cred = Number(r.total_credito);
+      porTipo[r.tipo_comprobante].cuentas.push({
+        codigo: r.cuenta_nivel,
+        nombre: r.cuenta_nombre || r.cuenta_nivel,
+        debito: deb,
+        credito: cred,
+        saldo: deb - cred,
+      });
+      porTipo[r.tipo_comprobante].total_debito += deb;
+      porTipo[r.tipo_comprobante].total_credito += cred;
+    }
+
+    const resumen = Object.values(porTipo);
 
     // Totales generales
-    const totales = asientos.reduce((acc, a) => ({
-      debito: acc.debito + Number(a.total_debito),
-      credito: acc.credito + Number(a.total_credito),
-    }), { debito: 0, credito: 0 });
+    const totales = resumen.reduce((acc, t) => ({
+      debito: acc.debito + t.total_debito,
+      credito: acc.credito + t.total_credito,
+      documentos: acc.documentos + t.num_documentos,
+    }), { debito: 0, credito: 0, documentos: 0 });
 
     res.render('contabilidad/libro-diario', {
       title: 'Libro Diario — Quipusoft',
       user: req.user,
-      asientos,
+      resumen,
       totales,
       fechaDesde,
       fechaHasta,
-      cuentaFiltro: cuenta || '',
+      nivelFiltro,
       error: req.flash('error'),
       success: req.flash('success'),
     });

@@ -7,100 +7,142 @@
   ]
 }) %>
 
+<% if(error && error.length){ %><div class="alert alert-error"><%= error %></div><% } %>
+
+<!-- FILTROS -->
 <div class="erp-search-panel">
-  <div class="erp-search-panel-title">Opciones de búsqueda</div>
-  <form method="GET" action="/contabilidad/libro-diario">
-    <div class="erp-search-body">
-      <div class="erp-search-row erp-row-split">
-        <label>Fechas</label>
-        <div class="erp-field-wrap valid">
-          <input class="erp-input" type="date" name="desde" value="<%= fechaDesde %>">
-          <span class="erp-check">✓</span>
-        </div>
-        <div class="erp-field-wrap valid">
-          <input class="erp-input" type="date" name="hasta" value="<%= fechaHasta %>">
-          <span class="erp-check">✓</span>
-        </div>
+  <form method="GET" action="/contabilidad/libro-diario" class="erp-search-form">
+    <div class="erp-search-row">
+      <label>Fechas</label>
+      <div class="erp-field-wrap valid">
+        <input class="erp-input" type="date" name="desde" value="<%= fechaDesde %>">
+        <span style="padding:0 4px;color:var(--muted);">—</span>
+        <input class="erp-input" type="date" name="hasta" value="<%= fechaHasta %>">
+        <span class="erp-check">✓</span>
       </div>
-      <div class="erp-search-row">
-        <label>Filtrar por cuenta</label>
-        <div class="erp-field-wrap">
-          <input class="erp-input" type="text" name="cuenta" value="<%= cuentaFiltro %>" placeholder="Ej: 1305, 4135, 24... (opcional)">
-        </div>
+      <label>Nivel de cuentas</label>
+      <div class="erp-field-wrap valid">
+        <select class="erp-select" name="nivel">
+          <option value="clase"      <%= nivelFiltro==='clase'      ?'selected':'' %>>Clase (1 dígito)</option>
+          <option value="grupo"      <%= nivelFiltro==='grupo'      ?'selected':'' %>>Grupo (2 dígitos)</option>
+          <option value="cuenta"     <%= nivelFiltro==='cuenta'     ?'selected':'' %>>Cuenta (4 dígitos)</option>
+          <option value="subcuenta"  <%= nivelFiltro==='subcuenta'  ?'selected':'' %>>Subcuenta (6 dígitos)</option>
+          <option value="auxiliar"   <%= nivelFiltro==='auxiliar'   ?'selected':'' %>>Auxiliar (8 dígitos)</option>
+        </select>
+        <span class="erp-check">✓</span>
       </div>
-    </div>
-    <div class="erp-actions">
-      <button type="submit" class="erp-btn erp-btn-blue"><span class="erp-btn-icon">🔎</span> Mostrar libro diario</button>
-      <button type="button" onclick="window.print()" class="erp-btn erp-btn-teal"><span class="erp-btn-icon">🖨</span> Imprimir libro diario</button>
+      <button type="submit" class="erp-btn erp-btn-blue">🔎 Mostrar libro diario</button>
+      <button type="button" onclick="window.print()" class="erp-btn erp-btn-outline">🖨 Imprimir</button>
     </div>
   </form>
 </div>
 
 <div class="erp-totales-bar">
-  <span>Asientos: <strong><%= asientos.length %></strong></span>
-  <span>Total débitos: <strong class="erp-amount-debit">$<%= totales.debito.toLocaleString('es-CO') %></strong></span>
-  <span>Total créditos: <strong class="erp-amount-credit">$<%= totales.credito.toLocaleString('es-CO') %></strong></span>
+  <span>Tipos de documento: <strong><%= resumen.length %></strong></span>
+  <span>Total documentos: <strong><%= totales.documentos %></strong></span>
+  <span>Total débitos: <strong class="erp-amount-debit">$<%= totales.debito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
+  <span>Total créditos: <strong class="erp-amount-credit">$<%= totales.credito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
   <span class="<%= Math.abs(totales.debito - totales.credito) < 1 ? 'equilibrado' : 'desequilibrado' %>">
     <%= Math.abs(totales.debito - totales.credito) < 1 ? '✅ Partida doble cuadra' : '⚠ Diferencia: $' + Math.abs(totales.debito - totales.credito).toLocaleString('es-CO') %>
   </span>
 </div>
 
-<% asientos.forEach(a => { %>
-  <div class="erp-book-section">
-    <div class="erp-book-section-title">
-      <span class="comprobante"><%= a.numero_comprobante %></span>
-      <span class="fecha"><%= new Date(a.fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'}) %></span>
-      <span class="tipo-badge"><%= a.tipo_comprobante %></span>
-      <% if(a.es_caso_atipico){ %><span class="atipico-badge">⚠ Caso <%= a.codigo_caso %></span><% } %>
-      <% if(a.estado === 'corregido'){ %><span class="corregido-badge">✅ Corregido</span><% } %>
-      <% if(a.estado === 'ajuste'){ %><span class="ajuste-badge">🔧 Asiento de ajuste</span><% } %>
-      <% if(a.es_caso_atipico && a.estado !== 'corregido' && a.estado !== 'ajuste'){ %>
-        <a href="/contabilidad/ajuste/<%= a.id %>" class="erp-btn erp-btn-blue" style="padding:3px 10px;font-size:11px;">✏ Registrar ajuste</a>
-      <% } %>
-      <span style="font-weight:400;font-size:12.5px;color:var(--muted);">
-        — <%= a.concepto %> — <%= a.contraparte %>
-      </span>
-    </div>
-    <% if(a.es_caso_atipico && a.nota_pedagogica){ %>
-      <div class="nota-ped" style="margin-bottom:6px;">📌 <%= a.nota_pedagogica %></div>
-    <% } %>
-    <table class="erp-book-table">
-      <thead><tr>
-        <th style="width:100px">Código cuenta</th>
-        <th>Nombre cuenta</th>
-        <th class="r" style="width:150px">Débito</th>
-        <th class="r" style="width:150px">Crédito</th>
-      </tr></thead>
-      <tbody>
-      <% JSON.parse(JSON.stringify(a.detalles)).forEach(d => { %>
-        <tr>
-          <td><code><%= d.cuenta_codigo %></code></td>
-          <td><%= d.cuenta_nombre %><% if(d.descripcion && d.descripcion !== d.cuenta_nombre){ %> — <span style="color:var(--muted);"><%= d.descripcion %></span><% } %></td>
-          <td class="r <%= d.debito > 0 ? 'erp-amount-debit' : '' %>"><%= d.debito > 0 ? d.debito.toLocaleString('es-CO',{minimumFractionDigits:2}) : '0.00' %></td>
-          <td class="r <%= d.credito > 0 ? 'erp-amount-credit' : '' %>"><%= d.credito > 0 ? d.credito.toLocaleString('es-CO',{minimumFractionDigits:2}) : '0.00' %></td>
-        </tr>
-      <% }) %>
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colspan="2">Totales</td>
-          <td class="r"><%= Number(a.total_debito).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
-          <td class="r"><%= Number(a.total_credito).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
-        </tr>
-      </tfoot>
-    </table>
+<% if(resumen.length === 0) { %>
+  <div style="padding:2rem;text-align:center;color:var(--muted);">
+    No hay movimientos en el período seleccionado.
   </div>
+<% } else { %>
+
+<% resumen.forEach(tipo => { %>
+<div class="erp-book-section">
+  <div class="erp-book-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+    <span>
+      <%= tipo.tipo %>
+      <span style="font-weight:400;font-size:12px;color:var(--muted);margin-left:8px;">
+        <%= tipo.num_documentos %> documento<%= tipo.num_documentos!==1?'s':'' %>
+        &nbsp;|&nbsp; <%= new Date(tipo.fecha_desde).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}) %>
+        <% if(tipo.fecha_desde !== tipo.fecha_hasta) { %>
+          — <%= new Date(tipo.fecha_hasta).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}) %>
+        <% } %>
+      </span>
+    </span>
+    <span style="font-size:13px;">
+      D: <strong class="erp-amount-debit">$<%= tipo.total_debito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong>
+      &nbsp; C: <strong class="erp-amount-credit">$<%= tipo.total_credito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong>
+    </span>
+  </div>
+  <table class="erp-book-table">
+    <thead><tr>
+      <th style="width:120px">Código (<%= nivelFiltro %>)</th>
+      <th>Nombre cuenta</th>
+      <th class="r" style="width:160px">Débito (+)</th>
+      <th class="r" style="width:160px">Crédito (−)</th>
+      <th class="r" style="width:160px">Saldo</th>
+    </tr></thead>
+    <tbody>
+    <% tipo.cuentas.forEach(cta => { %>
+      <tr>
+        <td><code style="font-size:11px;"><%= cta.codigo %></code></td>
+        <td><%= cta.nombre %></td>
+        <td class="r erp-amount-debit"><%= cta.debito > 0 ? cta.debito.toLocaleString('es-CO',{minimumFractionDigits:2}) : '' %></td>
+        <td class="r erp-amount-credit"><%= cta.credito > 0 ? cta.credito.toLocaleString('es-CO',{minimumFractionDigits:2}) : '' %></td>
+        <td class="r" style="font-weight:600;color:<%= cta.saldo >= 0 ? 'var(--erp-check-green)' : 'var(--red)' %>">
+          <%= cta.saldo.toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+        </td>
+      </tr>
+    <% }) %>
+    </tbody>
+    <tfoot>
+      <tr style="font-weight:700;background:var(--gray);">
+        <td colspan="2">Total <%= tipo.tipo %></td>
+        <td class="r erp-amount-debit"><%= tipo.total_debito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r erp-amount-credit"><%= tipo.total_credito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r" style="color:<%= Math.abs(tipo.total_debito-tipo.total_credito)<1?'var(--erp-check-green)':'var(--red)' %>">
+          <%= (tipo.total_debito - tipo.total_credito).toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
 <% }) %>
 
+<!-- TOTALES GENERALES -->
+<div class="erp-book-section" style="background:var(--erp-header-bg);color:#fff;border-radius:8px;">
+  <div class="erp-book-section-title" style="color:#fff;">Totales generales — <%= fechaDesde %> al <%= fechaHasta %></div>
+  <table class="erp-book-table" style="color:#fff;">
+    <thead><tr>
+      <th colspan="2">Concepto</th>
+      <th class="r">Débito</th>
+      <th class="r">Crédito</th>
+      <th class="r">Saldo neto</th>
+    </tr></thead>
+    <tbody>
+    <% resumen.forEach(t => { %>
+      <tr>
+        <td colspan="2"><%= t.tipo %> (<%= t.num_documentos %> docs.)</td>
+        <td class="r">$<%= t.total_debito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r">$<%= t.total_credito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r">$<%= (t.total_debito - t.total_credito).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+    <tfoot>
+      <tr style="font-size:15px;font-weight:700;border-top:2px solid rgba(255,255,255,0.3);">
+        <td colspan="2">TOTAL GENERAL (<%= totales.documentos %> documentos)</td>
+        <td class="r">$<%= totales.debito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r">$<%= totales.credito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r" style="color:<%= Math.abs(totales.debito-totales.credito)<1?'#A8E6CF':'#FFB3B3' %>">
+          $<%= (totales.debito - totales.credito).toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+          <%= Math.abs(totales.debito-totales.credito)<1?'✓':'✗' %>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<% } %>
+
 <style>
-.comprobante { font-family:monospace; font-weight:700; }
-.fecha { font-size:12px; color:var(--muted); font-weight:400; }
-.tipo-badge { font-size:11px; background:var(--erp-row-hover); color:var(--erp-header-bg); padding:2px 8px; border-radius:10px; font-weight:600; }
-.atipico-badge { font-size:11px; background:#FDEBD0; color:#784212; padding:2px 8px; border-radius:10px; font-weight:600; }
-.corregido-badge { font-size:11px; background:#D5E8D4; color:#1E5631; padding:2px 8px; border-radius:10px; font-weight:600; }
-.ajuste-badge { font-size:11px; background:var(--erp-row-hover); color:var(--erp-header-bg); padding:2px 8px; border-radius:10px; font-weight:600; }
-.nota-ped { font-size:12px; background:#FFF3CD; border-left:3px solid #F0AD4E; padding:4px 10px; border-radius:0 4px 4px 0; color:#7D4900; }
 @media print { .erp-search-panel, .erp-actions, nav, .erp-tabs { display:none; } }
 </style>
-
 <%- include('../partials/footer') %>
