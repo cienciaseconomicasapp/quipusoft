@@ -27,9 +27,10 @@
             <option value="FC">FC - Factura electrónica de compra</option>
           </optgroup>
           <optgroup label="Asiento manual (partida doble)">
+            <option value="CA">CA - Causación</option>
             <option value="CE">CE - Comprobante de egreso</option>
             <option value="CR">CR - Comprobante de recibo</option>
-            <option value="NC">NC - Nota de contabilidad</option>
+            <option value="NC">NC - Nota de contabilidad (ajustes)</option>
           </optgroup>
         </select>
         <span class="erp-check">✓</span>
@@ -426,6 +427,7 @@ const PRODUCTOS_CATALOGO = <%- JSON.stringify(productos.map(p => ({
     CE: 'CE - COMPROBANTE DE EGRESO',
     CR: 'CR - COMPROBANTE DE RECIBO',
     NC: 'NC - NOTA DE CONTABILIDAD',
+    CA: 'CA - CAUSACIÓN',
   };
 
   async function actualizarNumeroAsiento(fuente) {
@@ -459,7 +461,7 @@ const PRODUCTOS_CATALOGO = <%- JSON.stringify(productos.map(p => ({
       // Reconstruir filas de items con el catálogo correspondiente (productos en FC, todo en FV)
       while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
       nuevaFilaFactura();
-    } else if (val === 'CE' || val === 'CR' || val === 'NC') {
+    } else if (val === 'CE' || val === 'CR' || val === 'NC' || val === 'CA') {
       formAsiento.style.display = '';
       document.getElementById('asiento-fuente').value = val;
       document.getElementById('asiento-fuente-label').value = FUENTES_ASIENTO[val];
