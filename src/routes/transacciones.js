@@ -66,6 +66,7 @@ const FUENTES_ASIENTO = {
   CR: { nombre: 'CR - Comprobante de recibo', tipo_comprobante: 'Comprobante de recibo' },
   NC: { nombre: 'NC - Nota de contabilidad', tipo_comprobante: 'Nota de contabilidad' },
   CA: { nombre: 'CA - Causación', tipo_comprobante: 'Causación' },
+  RC: { nombre: 'RC - Recibo de caja', tipo_comprobante: 'Recibo de caja' },
 };
 
 router.get('/nueva/form', requireAuth, setSchema, async (req, res) => {
