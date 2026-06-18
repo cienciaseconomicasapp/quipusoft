@@ -1,0 +1,42 @@
+<%- include('../partials/header') %>
+<%- include('../partials/erp-header', { icon: '📊', title: 'Formatos 1005 / 1006 — IVA descontable y generado' }) %>
+<div style="display:flex;gap:8px;margin-bottom:1rem;">
+  <a href="/exogena" class="erp-btn erp-btn-outline">← Exógena</a>
+  <button onclick="window.print()" class="erp-btn erp-btn-outline">🖨 Imprimir</button>
+</div>
+<div class="erp-totales-bar">
+  <span>1006 — IVA generado total: <strong class="erp-amount-credit">$<%= ivaGenerado.toLocaleString('es-CO',{minimumFractionDigits:0}) %></strong></span>
+  <span>1005 — IVA descontable total: <strong class="erp-amount-debit">$<%= ivaDescontable.toLocaleString('es-CO',{minimumFractionDigits:0}) %></strong></span>
+  <span>Saldo neto (a pagar DIAN): <strong>$<%= (ivaGenerado-ivaDescontable).toLocaleString('es-CO',{minimumFractionDigits:0}) %></strong></span>
+</div>
+<div class="erp-items-table-wrap" style="padding:0;">
+<table class="erp-book-table">
+  <thead><tr>
+    <th>Bimestre</th><th class="r">1006 — IVA generado</th>
+    <th class="r">1005 — IVA descontable</th><th class="r">Saldo bimestral</th>
+  </tr></thead>
+  <tbody>
+  <% bimestres.forEach(b => { %>
+    <tr>
+      <td><%= b.bimestre %>° bimestre (<%= b.label %>)</td>
+      <td class="r">$<%= b.iva_generado.toLocaleString('es-CO',{minimumFractionDigits:0}) %></td>
+      <td class="r">$<%= b.iva_descontable.toLocaleString('es-CO',{minimumFractionDigits:0}) %></td>
+      <td class="r" style="font-weight:600;color:<%= b.saldo>=0?'var(--red)':'var(--erp-check-green)' %>">
+        $<%= b.saldo.toLocaleString('es-CO',{minimumFractionDigits:0}) %>
+        <%= b.saldo>0?' (a pagar)':b.saldo<0?' (a favor)':'' %>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+  <tfoot>
+    <tr style="font-weight:700;background:var(--gray);">
+      <td>TOTAL AÑO GRAVABLE <%= anno %></td>
+      <td class="r">$<%= ivaGenerado.toLocaleString('es-CO',{minimumFractionDigits:0}) %></td>
+      <td class="r">$<%= ivaDescontable.toLocaleString('es-CO',{minimumFractionDigits:0}) %></td>
+      <td class="r">$<%= (ivaGenerado-ivaDescontable).toLocaleString('es-CO',{minimumFractionDigits:0}) %></td>
+    </tr>
+  </tfoot>
+</table>
+</div>
+<style>@media print { nav, .erp-tabs, .erp-actions { display:none; } }</style>
+<%- include('../partials/footer') %>

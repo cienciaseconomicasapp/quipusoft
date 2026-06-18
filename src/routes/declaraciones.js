@@ -11,8 +11,10 @@ const TARIFA_RENTA = 35; // Art. 240 ET — Ley 2277/2022
 const CUENTAS = {
   IVA_GENERADO: '24080505',      // 2408 / 240805 — crédito = IVA cobrado en ventas
   IVA_DESCONTABLE: '24081005',   // 2408 / 240810 — débito = IVA pagado en compras
-  RETENCION_COMPRAS: '23654005', // 2365 / 236540 — crédito = retención practicada al comprar (2.5%)
-  RETENCION_A_FAVOR: '13551505', // 1355 / 135515 — débito = retención que nos practicaron (a favor)
+  RETENCION_COMPRAS: '23654005', // 2365 / 236540 — retención practicada en compras (2.5%)
+  RETENCION_HON: '23651505',     // 2365 / 236515 — retención honorarios (11%)
+  RETENCION_ARREND: '23652505',  // 2365 / 236525 — retención arrendamientos (3.5%)
+  RETENCION_A_FAVOR: '13551505', // 1355 / 135515 — retención que nos practicaron (a favor)
 };
 
 router.get('/', requireAuth, setSchema, async (req, res) => {
@@ -93,21 +95,40 @@ router.get('/retencion/:mes', requireAuth, setSchema, async (req, res) => {
 
   try {
     const { rows: [r] } = await pool.query(`
-      SELECT COALESCE(SUM(ad.credito), 0) AS total_retencion
+      SELECT
+        COALESCE(SUM(CASE WHEN ad.cuenta_codigo = $3 THEN ad.credito ELSE 0 END), 0) AS ret_compras,
+        COALESCE(SUM(CASE WHEN ad.cuenta_codigo = $4 THEN ad.credito ELSE 0 END), 0) AS ret_hon,
+        COALESCE(SUM(CASE WHEN ad.cuenta_codigo = $5 THEN ad.credito ELSE 0 END), 0) AS ret_arrend
       FROM "${schema}".asientos_detalle ad
       JOIN "${schema}".asientos a ON a.id = ad.asiento_id
       WHERE a.fecha BETWEEN $1 AND $2
-        AND ad.cuenta_codigo = $3
-    `, [fechaInicio, fechaFin, CUENTAS.RETENCION_COMPRAS]);
+        AND ad.cuenta_codigo IN ($3, $4, $5)
+    `, [fechaInicio, fechaFin, CUENTAS.RETENCION_COMPRAS, CUENTAS.RETENCION_HON, CUENTAS.RETENCION_ARREND]);
 
-    const totalRetencion = parseInt(r.total_retencion) || 0;
-    const baseCompras = Math.round(totalRetencion / (TARIFA_COMPRAS / 100));
+    const retCompras = parseInt(r.ret_compras) || 0;
+    const retHon = parseInt(r.ret_hon) || 0;
+    const retArrend = parseInt(r.ret_arrend) || 0;
+    const totalRetencion = retCompras + retHon + retArrend;
 
-    const conceptos = totalRetencion > 0 ? [{
-      concepto: `Compras (declarantes) — tarifa ${TARIFA_COMPRAS}%`,
-      base: baseCompras,
-      retencion: totalRetencion,
-    }] : [];
+    const TARIFA_HON = 11;
+    const TARIFA_ARREND = 3.5;
+
+    const conceptos = [];
+    if (retCompras > 0) conceptos.push({
+      concepto: `Compras generales (declarantes) — tarifa ${TARIFA_COMPRAS}%`,
+      base: Math.round(retCompras / (TARIFA_COMPRAS / 100)),
+      retencion: retCompras,
+    });
+    if (retHon > 0) conceptos.push({
+      concepto: `Honorarios y comisiones (personas jurídicas) — tarifa ${TARIFA_HON}%`,
+      base: Math.round(retHon / (TARIFA_HON / 100)),
+      retencion: retHon,
+    });
+    if (retArrend > 0) conceptos.push({
+      concepto: `Arrendamiento de bienes inmuebles (declarantes) — tarifa ${TARIFA_ARREND}%`,
+      base: Math.round(retArrend / (TARIFA_ARREND / 100)),
+      retencion: retArrend,
+    });
 
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];

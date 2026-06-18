@@ -1,0 +1,35 @@
+<%- include('../partials/header') %>
+<%- include('../partials/erp-header', { icon: '📊', title: 'Información Exógena Tributaria' }) %>
+<div class="tip-box" style="background:#EBF5FB;border-left:4px solid #2E75B6;padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:1.5rem;">
+  <strong>Año Gravable <%= anno %></strong> — Inversiones Uniatlántico S.A.S. — NIT: 900.123.456-7<br>
+  Los valores se calculan automáticamente desde el Libro Diario. El estudiante asigna el concepto DIAN en cada formato.
+  Resolución DIAN 000227 de 2025 (AG 2025) — plazo de presentación: hasta agosto de 2026.
+</div>
+<div class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem;">
+  <a href="/exogena/1001" class="form-card" style="text-decoration:none;text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:var(--blue);">1001</div>
+    <h3 style="font-size:14px;font-weight:600;margin:6px 0;">Pagos y retenciones practicadas</h3>
+    <p style="font-size:12px;color:var(--muted);">Proveedores, honorarios, arrendamientos, servicios</p>
+  </a>
+  <a href="/exogena/1007" class="form-card" style="text-decoration:none;text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:var(--blue);">1007</div>
+    <h3 style="font-size:14px;font-weight:600;margin:6px 0;">Ingresos recibidos</h3>
+    <p style="font-size:12px;color:var(--muted);">Ventas y servicios prestados a clientes</p>
+  </a>
+  <a href="/exogena/iva" class="form-card" style="text-decoration:none;text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:var(--blue);">1005<br>1006</div>
+    <h3 style="font-size:14px;font-weight:600;margin:6px 0;">IVA descontable y generado</h3>
+    <p style="font-size:12px;color:var(--muted);">Resumen bimestral IVA generado vs descontable</p>
+  </a>
+  <a href="/exogena/saldos" class="form-card" style="text-decoration:none;text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:var(--blue);">1008<br>1009</div>
+    <h3 style="font-size:14px;font-weight:600;margin:6px 0;">Saldos cartera y proveedores</h3>
+    <p style="font-size:12px;color:var(--muted);">Cuentas por cobrar y pagar al 31-dic-<%= anno %></p>
+  </a>
+  <a href="/declaraciones" class="form-card" style="text-decoration:none;text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:var(--blue);">300<br>350<br>110</div>
+    <h3 style="font-size:14px;font-weight:600;margin:6px 0;">Declaraciones tributarias</h3>
+    <p style="font-size:12px;color:var(--muted);">IVA bimestral, Retención mensual, Renta anual</p>
+  </a>
+</div>
+<%- include('../partials/footer') %>

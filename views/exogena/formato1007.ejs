@@ -1,0 +1,52 @@
+<%- include('../partials/header') %>
+<%- include('../partials/erp-header', { icon: '📊', title: 'Formato 1007 — Ingresos recibidos' }) %>
+<div style="display:flex;gap:8px;margin-bottom:1rem;">
+  <a href="/exogena" class="erp-btn erp-btn-outline">← Exógena</a>
+  <button onclick="window.print()" class="erp-btn erp-btn-outline">🖨 Imprimir</button>
+</div>
+<div class="tip-box" style="background:#EBF5FB;border-left:4px solid #2E75B6;padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:1rem;">
+  <strong>Formato 1007 — AG <%= anno %></strong> — Ingresos recibidos de terceros (ventas de bienes y servicios).
+  Concepto DIAN: <strong>4040</strong> (Ingresos gravados con IVA).
+</div>
+<div class="erp-totales-bar">
+  <span>Clientes reportados: <strong><%= ingresos.length %></strong></span>
+  <span>Total ingresos: <strong class="erp-amount-credit">$<%= totalIngresos.toLocaleString('es-CO',{minimumFractionDigits:0}) %></strong></span>
+  <span>Retención sufrida: <strong class="erp-amount-debit">$<%= totalRetencion.toLocaleString('es-CO',{minimumFractionDigits:0}) %></strong></span>
+</div>
+<div class="erp-items-table-wrap" style="padding:0;">
+<table class="erp-book-table" style="font-size:12px;">
+  <thead><tr>
+    <th>Cód.</th><th>Tipo doc.</th><th>Identificación</th><th>Nombre / Razón social</th>
+    <th class="c">Dpto.</th><th class="c">Municipio</th>
+    <th class="c">Concepto</th>
+    <th class="r">Valor ingreso</th><th class="r">Retención sufrida</th>
+  </tr></thead>
+  <tbody>
+  <% if(ingresos.length === 0) { %>
+    <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--muted);">No hay ingresos registrados para el año <%= anno %>.</td></tr>
+  <% } %>
+  <% ingresos.forEach(r => { %>
+    <tr>
+      <td><code><%= r.codigo %></code></td>
+      <td><%= r.tipo_documento %></td>
+      <td><%= r.identificacion %></td>
+      <td><strong><%= r.nombre %></strong></td>
+      <td class="c"><%= r.cod_departamento || '-' %></td>
+      <td class="c"><%= r.cod_municipio || '-' %></td>
+      <td class="c"><span style="background:var(--erp-check-green);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">4040</span></td>
+      <td class="r"><strong>$<%= Number(r.valor_ingreso).toLocaleString('es-CO',{minimumFractionDigits:0}) %></strong></td>
+      <td class="r" style="color:var(--red);">$<%= Number(r.retencion_sufrida).toLocaleString('es-CO',{minimumFractionDigits:0}) %></td>
+    </tr>
+  <% }) %>
+  </tbody>
+  <tfoot>
+    <tr style="font-weight:700;background:var(--gray);">
+      <td colspan="7">TOTALES FORMATO 1007</td>
+      <td class="r">$<%= totalIngresos.toLocaleString('es-CO',{minimumFractionDigits:0}) %></td>
+      <td class="r" style="color:var(--red);">$<%= totalRetencion.toLocaleString('es-CO',{minimumFractionDigits:0}) %></td>
+    </tr>
+  </tfoot>
+</table>
+</div>
+<style>@media print { nav, .erp-tabs, .erp-actions { display:none; } }</style>
+<%- include('../partials/footer') %>

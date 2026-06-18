@@ -1,0 +1,66 @@
+<%- include('../partials/header') %>
+<%- include('../partials/erp-header', { icon: '📊', title: 'Formato 1001 — Pagos y retenciones practicadas' }) %>
+<div style="display:flex;gap:8px;margin-bottom:1rem;">
+  <a href="/exogena" class="erp-btn erp-btn-outline">← Exógena</a>
+  <button onclick="window.print()" class="erp-btn erp-btn-outline">🖨 Imprimir</button>
+</div>
+<div class="tip-box" style="background:#EBF5FB;border-left:4px solid #2E75B6;padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:1rem;">
+  <strong>Formato 1001 v.11 — AG <%= anno %></strong> — Pagos o abonos en cuenta y retenciones practicadas.<br>
+  El sistema sugiere el <strong>concepto DIAN</strong> según el tipo de gasto registrado en contabilidad.
+  El estudiante debe verificarlo antes de presentar a la DIAN.
+</div>
+<div class="erp-totales-bar">
+  <span>Terceros reportados: <strong><%= pagos.length %></strong></span>
+  <span>Total pagado: <strong class="erp-amount-debit">$<%= totalPagado.toLocaleString('es-CO',{minimumFractionDigits:0}) %></strong></span>
+  <span>Total retención practicada: <strong class="erp-amount-credit">$<%= totalRetencion.toLocaleString('es-CO',{minimumFractionDigits:0}) %></strong></span>
+</div>
+<div class="erp-items-table-wrap" style="padding:0;">
+<table class="erp-book-table" style="font-size:12px;">
+  <thead><tr>
+    <th>Cód.</th>
+    <th>Tipo doc.</th>
+    <th>Identificación</th>
+    <th>Nombre / Razón social</th>
+    <th class="c">Dpto.</th>
+    <th class="c">Municipio</th>
+    <th class="c">Concepto DIAN (sugerido)</th>
+    <th class="r">Valor pagado</th>
+    <th class="r">Retención practicada</th>
+  </tr></thead>
+  <tbody>
+  <% if(pagos.length === 0) { %>
+    <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--muted);">No hay pagos registrados a proveedores para el año <%= anno %>.</td></tr>
+  <% } %>
+  <% pagos.forEach(p => { %>
+    <tr>
+      <td><code><%= p.codigo %></code></td>
+      <td><%= p.tipo_documento %></td>
+      <td><%= p.identificacion %></td>
+      <td><strong><%= p.nombre %></strong></td>
+      <td class="c"><%= p.cod_departamento || '-' %></td>
+      <td class="c"><%= p.cod_municipio || '-' %></td>
+      <td class="c">
+        <span style="background:var(--blue);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">
+          <%= p.concepto_sugerido %>
+        </span>
+        <span style="font-size:11px;color:var(--muted);display:block;"><%= p.desc_concepto %></span>
+      </td>
+      <td class="r"><strong>$<%= Number(p.valor_pagado).toLocaleString('es-CO',{minimumFractionDigits:0}) %></strong></td>
+      <td class="r" style="color:var(--red);"><%= Number(p.retencion_practicada) > 0 ? '$'+Number(p.retencion_practicada).toLocaleString('es-CO',{minimumFractionDigits:0}) : '-' %></td>
+    </tr>
+  <% }) %>
+  </tbody>
+  <tfoot>
+    <tr style="font-weight:700;background:var(--gray);">
+      <td colspan="7">TOTALES FORMATO 1001</td>
+      <td class="r">$<%= totalPagado.toLocaleString('es-CO',{minimumFractionDigits:0}) %></td>
+      <td class="r" style="color:var(--red);">$<%= totalRetencion.toLocaleString('es-CO',{minimumFractionDigits:0}) %></td>
+    </tr>
+  </tfoot>
+</table>
+</div>
+<div style="margin-top:1.5rem;padding:12px;background:var(--gray);border-radius:8px;font-size:13px;">
+  <strong>Conceptos DIAN disponibles:</strong> 5001 Compras de bienes · 5002 Honorarios · 5003 Servicios generales · 5004 Arrendamientos · 5005 Servicios técnicos · 5006 Servicios de transporte · 5011 Publicidad, propaganda y relaciones públicas · 5040 Contratos de construcción
+</div>
+<style>@media print { nav, .erp-tabs, .erp-actions, .tip-box button, a.erp-btn { display:none; } }</style>
+<%- include('../partials/footer') %>

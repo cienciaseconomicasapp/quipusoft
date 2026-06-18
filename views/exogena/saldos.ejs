@@ -1,0 +1,66 @@
+<%- include('../partials/header') %>
+<%- include('../partials/erp-header', { icon: '📊', title: 'Formatos 1008 / 1009 — Saldos al 31-dic' }) %>
+<div style="display:flex;gap:8px;margin-bottom:1rem;">
+  <a href="/exogena" class="erp-btn erp-btn-outline">← Exógena</a>
+  <button onclick="window.print()" class="erp-btn erp-btn-outline">🖨 Imprimir</button>
+</div>
+
+<div class="erp-book-section">
+  <div class="erp-book-section-title">Formato 1008 — Cuentas por cobrar al 31-dic-<%= anno %> (Clientes)</div>
+  <table class="erp-book-table" style="font-size:12px;">
+    <thead><tr>
+      <th>Cód.</th><th>Tipo doc.</th><th>Identificación</th><th>Nombre / Razón social</th>
+      <th class="c">Dpto.</th><th class="c">Municipio</th><th class="r">Saldo cartera</th>
+    </tr></thead>
+    <tbody>
+    <% if(cartera.length===0) { %>
+      <tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--muted);">No hay saldos de cartera al 31-dic-<%= anno %>.</td></tr>
+    <% } %>
+    <% cartera.forEach(r => { %>
+      <tr>
+        <td><code><%= r.codigo %></code></td><td><%= r.tipo_documento %></td>
+        <td><%= r.identificacion %></td><td><strong><%= r.nombre %></strong></td>
+        <td class="c"><%= r.cod_departamento||'-' %></td><td class="c"><%= r.cod_municipio||'-' %></td>
+        <td class="r"><strong>$<%= Number(r.saldo).toLocaleString('es-CO',{minimumFractionDigits:0}) %></strong></td>
+      </tr>
+    <% }) %>
+    </tbody>
+    <tfoot>
+      <tr style="font-weight:700;background:var(--gray);">
+        <td colspan="6">Total cartera (Formato 1008)</td>
+        <td class="r">$<%= totalCartera.toLocaleString('es-CO',{minimumFractionDigits:0}) %></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="erp-book-section">
+  <div class="erp-book-section-title">Formato 1009 — Cuentas por pagar al 31-dic-<%= anno %> (Proveedores)</div>
+  <table class="erp-book-table" style="font-size:12px;">
+    <thead><tr>
+      <th>Cód.</th><th>Tipo doc.</th><th>Identificación</th><th>Nombre / Razón social</th>
+      <th class="c">Dpto.</th><th class="c">Municipio</th><th class="r">Saldo proveedor</th>
+    </tr></thead>
+    <tbody>
+    <% if(proveedores.length===0) { %>
+      <tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--muted);">No hay saldos de proveedores al 31-dic-<%= anno %>.</td></tr>
+    <% } %>
+    <% proveedores.forEach(r => { %>
+      <tr>
+        <td><code><%= r.codigo %></code></td><td><%= r.tipo_documento %></td>
+        <td><%= r.identificacion %></td><td><strong><%= r.nombre %></strong></td>
+        <td class="c"><%= r.cod_departamento||'-' %></td><td class="c"><%= r.cod_municipio||'-' %></td>
+        <td class="r"><strong>$<%= Number(r.saldo).toLocaleString('es-CO',{minimumFractionDigits:0}) %></strong></td>
+      </tr>
+    <% }) %>
+    </tbody>
+    <tfoot>
+      <tr style="font-weight:700;background:var(--gray);">
+        <td colspan="6">Total proveedores (Formato 1009)</td>
+        <td class="r">$<%= totalProveedores.toLocaleString('es-CO',{minimumFractionDigits:0}) %></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+<style>@media print { nav, .erp-tabs, .erp-actions { display:none; } }</style>
+<%- include('../partials/footer') %>
