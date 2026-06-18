@@ -30,6 +30,7 @@
 <div class="erp-totales-bar">
   <span>Suma débitos: <strong class="erp-amount-debit"><%= totales.debito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
   <span>Suma créditos: <strong class="erp-amount-credit"><%= totales.credito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
+  <span>Suma saldos (debe ser 0): <strong style="color:<%= Math.abs(totales.saldoNet||0) < 1 ? 'var(--erp-check-green)' : 'var(--red)' %>"><%= (totales.saldoNet||0).toLocaleString('es-CO',{minimumFractionDigits:2}) %> <%= Math.abs(totales.saldoNet||0) < 1 ? '✓' : '✗' %></strong></span>
   <span class="<%= Math.abs(totales.debito - totales.credito) < 1 ? 'equilibrado' : 'desequilibrado' %>">
     <%= Math.abs(totales.debito - totales.credito) < 1 ? '✅ Partida doble cuadra' : '⚠ Diferencia: $' + Math.abs(totales.debito - totales.credito).toLocaleString('es-CO') %>
   </span>
@@ -49,7 +50,7 @@
   </thead>
   <tbody>
   <% let claseActual = ''; %>
-  <% const nivelClass = { clase: 'erp-level-1', grupo: 'erp-level-2', cuenta: 'erp-level-3', subcuenta: 'erp-level-4' }; %>
+  <% const nivelClass = { clase: 'erp-level-1', grupo: 'erp-level-2', cuenta: 'erp-level-3', subcuenta: 'erp-level-4', auxiliar: 'erp-level-4' }; %>
   <% cuentas.forEach(c => { %>
     <% const claseNueva = c.codigo.substring(0,1); %>
     <% if(claseNueva !== claseActual){ claseActual = claseNueva; %>
@@ -64,12 +65,12 @@
       <td><code style="font-size:11px"><%= c.codigo %></code></td>
       <td style="padding-left:<%= 10 + Math.max(0,(c.codigo.length - 2)) * 12 %>px"><%= c.nombre %></td>
       <td class="c">
-        <span class="erp-badge-nat <%= c.naturaleza==='D'?'deb':'cred' %>"><%= c.naturaleza %></span>
+
       </td>
       <td class="r erp-amount-debit"><%= Number(c.total_debito).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
       <td class="r erp-amount-credit"><%= Number(c.total_credito).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
       <td class="r" style="font-weight:<%= c.tipo==='subcuenta'?'700':'400' %>;">
-        <%= Math.abs(c.saldo).toLocaleString('es-CO',{minimumFractionDigits:2}) %> <%= c.saldo >= 0 ? 'D' : 'C' %>
+        <span style="color:<%= c.saldo >= 0 ? 'var(--erp-check-green)' : 'var(--red)' %>;font-weight:600;"><%= c.saldo.toLocaleString('es-CO',{minimumFractionDigits:2}) %></span>
       </td>
     </tr>
   <% }) %>
@@ -79,6 +80,7 @@
       <td colspan="3">Gran total</td>
       <td class="r"><%= totales.debito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
       <td class="r"><%= totales.credito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      <td class="r" style="color:<%= Math.abs(totales.saldoNet||0) < 1 ? 'var(--erp-check-green)' : 'var(--red)' %>;font-weight:700;"><%= (totales.saldoNet||0).toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
       <td class="r"></td>
     </tr>
   </tfoot>

@@ -160,11 +160,19 @@ router.get('/libro-mayor', requireAuth, async (req, res) => {
 
       const totDebito  = movs.reduce((s, m) => s + Number(m.debito), 0);
       const totCredito = movs.reduce((s, m) => s + Number(m.credito), 0);
-      const saldo = c.naturaleza === 'D'
-        ? totDebito - totCredito
-        : totCredito - totDebito;
+      const saldo = totDebito - totCredito;
 
-      return { ...c, movimientos: movs, totDebito, totCredito, saldo };
+      // Saldo inicial: movimientos ANTES del período
+      const { rows: siRows } = await pool.query(
+        `SELECT COALESCE(SUM(ad.debito),0) AS deb, COALESCE(SUM(ad.credito),0) AS cre
+         FROM ${s}.asientos_detalle ad
+         JOIN ${s}.asientos a ON a.id = ad.asiento_id
+         WHERE ad.cuenta_codigo = $1 AND a.fecha < $2`,
+        [c.codigo, fechaDesde]
+      );
+      const saldoInicial = Number(siRows[0].deb) - Number(siRows[0].cre);
+
+      return { ...c, movimientos: movs, totDebito, totCredito, saldo, saldoInicial };
     }));
 
     res.render('contabilidad/libro-mayor', {
@@ -208,10 +216,9 @@ router.get('/libro-auxiliar', requireAuth, async (req, res) => {
       WHERE ad.cuenta_codigo = $1 AND a.fecha < $2
     `, [cuentaFiltro, fechaDesde]);
 
-    const nat = cuentaInfo[0]?.naturaleza || 'D';
     const db_ant = Number(saldoIni[0]?.debito_ant || 0);
     const cr_ant = Number(saldoIni[0]?.credito_ant || 0);
-    const saldoInicial = nat === 'D' ? db_ant - cr_ant : cr_ant - db_ant;
+    const saldoInicial = db_ant - cr_ant;
 
     // Movimientos del período
     const { rows: movs } = await pool.query(`
@@ -230,7 +237,7 @@ router.get('/libro-auxiliar', requireAuth, async (req, res) => {
     const movsConSaldo = movs.map(m => {
       const deb = Number(m.debito);
       const cre = Number(m.credito);
-      saldoAcum += nat === 'D' ? (deb - cre) : (cre - deb);
+      saldoAcum += deb - cre;
       return { ...m, saldo: saldoAcum };
     });
 
@@ -271,10 +278,7 @@ router.get('/balance-comprobacion', requireAuth, async (req, res) => {
         pc.codigo, pc.nombre, pc.naturaleza, pc.tipo, pc.tipo,
         COALESCE(SUM(ad.debito), 0)  AS total_debito,
         COALESCE(SUM(ad.credito), 0) AS total_credito,
-        CASE WHEN pc.naturaleza = 'D'
-          THEN COALESCE(SUM(ad.debito),0) - COALESCE(SUM(ad.credito),0)
-          ELSE COALESCE(SUM(ad.credito),0) - COALESCE(SUM(ad.debito),0)
-        END AS saldo
+        COALESCE(SUM(ad.debito),0) - COALESCE(SUM(ad.credito),0) AS saldo
       FROM ${s}.plan_cuentas pc
       LEFT JOIN ${s}.asientos_detalle ad ON ad.cuenta_codigo = pc.codigo
       LEFT JOIN ${s}.asientos a ON a.id = ad.asiento_id AND a.fecha <= $1
@@ -284,9 +288,10 @@ router.get('/balance-comprobacion', requireAuth, async (req, res) => {
     `, [fechaHasta]);
 
     const totales = rows.reduce((acc, r) => ({
-      debito:  acc.debito  + Number(r.total_debito),
-      credito: acc.credito + Number(r.total_credito),
-    }), { debito: 0, credito: 0 });
+      debito:   acc.debito  + Number(r.total_debito),
+      credito:  acc.credito + Number(r.total_credito),
+      saldoNet: acc.saldoNet + Number(r.saldo),
+    }), { debito: 0, credito: 0, saldoNet: 0 });
 
     res.render('contabilidad/balance-comprobacion', {
       title: 'Balance de Comprobación — Quipusoft',
@@ -314,10 +319,7 @@ router.get('/estado-situacion', requireAuth, async (req, res) => {
     const { rows } = await pool.query(`
       SELECT
         pc.codigo, pc.nombre, pc.naturaleza, pc.tipo,
-        CASE WHEN pc.naturaleza = 'D'
-          THEN COALESCE(SUM(ad.debito),0) - COALESCE(SUM(ad.credito),0)
-          ELSE COALESCE(SUM(ad.credito),0) - COALESCE(SUM(ad.debito),0)
-        END AS saldo
+        COALESCE(SUM(ad.debito),0) - COALESCE(SUM(ad.credito),0) AS saldo
       FROM ${s}.plan_cuentas pc
       LEFT JOIN ${s}.asientos_detalle ad ON ad.cuenta_codigo = pc.codigo
       LEFT JOIN ${s}.asientos a ON a.id = ad.asiento_id AND a.fecha <= $1
@@ -330,10 +332,7 @@ router.get('/estado-situacion', requireAuth, async (req, res) => {
     // Calcular utilidad/pérdida del ejercicio (ingresos - gastos - costos), AG completo hasta fechaHasta
     const { rows: resultRows } = await pool.query(`
       SELECT pc.codigo,
-        CASE WHEN pc.naturaleza = 'D'
-          THEN COALESCE(SUM(ad.debito),0) - COALESCE(SUM(ad.credito),0)
-          ELSE COALESCE(SUM(ad.credito),0) - COALESCE(SUM(ad.debito),0)
-        END AS saldo
+        COALESCE(SUM(ad.debito),0) - COALESCE(SUM(ad.credito),0) AS saldo
       FROM ${s}.plan_cuentas pc
       LEFT JOIN ${s}.asientos_detalle ad ON ad.cuenta_codigo = pc.codigo
       LEFT JOIN ${s}.asientos a ON a.id = ad.asiento_id AND a.fecha <= $1
@@ -344,7 +343,8 @@ router.get('/estado-situacion', requireAuth, async (req, res) => {
     let ingresos = 0, gastosCostos = 0;
     for (const r of resultRows) {
       const saldo = Number(r.saldo);
-      if (r.codigo.startsWith('4')) ingresos += saldo;
+      // Ingresos (clase 4) tienen saldo negativo (crédito), gastos/costos (5/6) positivo (débito)
+      if (r.codigo.startsWith('4')) ingresos += -saldo; // negamos para obtener valor positivo
       else gastosCostos += saldo;
     }
     const utilidadEjercicio = ingresos - gastosCostos;
@@ -353,9 +353,10 @@ router.get('/estado-situacion', requireAuth, async (req, res) => {
     let totalActivo = 0, totalPasivo = 0, totalPatrimonio = 0;
     for (const c of rows) {
       const saldo = Number(c.saldo);
+      // Activo (1) saldo positivo; Pasivo (2) y Patrimonio (3) saldo negativo → negamos para presentar positivo
       if (c.codigo.startsWith('1')) totalActivo += saldo;
-      else if (c.codigo.startsWith('2')) totalPasivo += saldo;
-      else if (c.codigo.startsWith('3')) totalPatrimonio += saldo;
+      else if (c.codigo.startsWith('2')) totalPasivo += -saldo;
+      else if (c.codigo.startsWith('3')) totalPatrimonio += -saldo;
     }
     totalPatrimonio += utilidadEjercicio;
     const totalPasivoPatrimonio = totalPasivo + totalPatrimonio;
@@ -391,10 +392,7 @@ router.get('/estado-resultados', requireAuth, async (req, res) => {
     const { rows } = await pool.query(`
       SELECT
         pc.codigo, pc.nombre, pc.naturaleza, pc.tipo,
-        CASE WHEN pc.naturaleza = 'D'
-          THEN COALESCE(SUM(ad.debito),0) - COALESCE(SUM(ad.credito),0)
-          ELSE COALESCE(SUM(ad.credito),0) - COALESCE(SUM(ad.debito),0)
-        END AS saldo
+        COALESCE(SUM(ad.debito),0) - COALESCE(SUM(ad.credito),0) AS saldo
       FROM ${s}.plan_cuentas pc
       LEFT JOIN ${s}.asientos_detalle ad ON ad.cuenta_codigo = pc.codigo
       LEFT JOIN ${s}.asientos a ON a.id = ad.asiento_id AND a.fecha BETWEEN $1 AND $2
@@ -407,7 +405,9 @@ router.get('/estado-resultados', requireAuth, async (req, res) => {
     let totalIngresos = 0, totalGastos = 0, totalCostos = 0;
     for (const c of rows) {
       const saldo = Number(c.saldo);
-      if (c.codigo.startsWith('4')) totalIngresos += saldo;
+      // Ingresos (4) saldo negativo (crédito) → negamos para presentar positivo
+      // Gastos (5) y Costos (6) saldo positivo (débito)
+      if (c.codigo.startsWith('4')) totalIngresos += -saldo;
       else if (c.codigo.startsWith('5')) totalGastos += saldo;
       else if (c.codigo.startsWith('6')) totalCostos += saldo;
     }

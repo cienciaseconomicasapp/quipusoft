@@ -48,41 +48,51 @@
     <thead><tr>
       <th style="width:90px">Código</th>
       <th>Nombre cuenta</th>
-      <th class="c" style="width:90px">Naturaleza</th>
+      <th class="r">Saldo inicial</th>
       <th class="r">Movimientos débito</th>
       <th class="r">Movimientos crédito</th>
-      <th class="r">Saldo</th>
+      <th class="r">Saldo final</th>
     </tr></thead>
     <tbody>
+    <% let sumaSaldos = 0; %>
     <% mayor.forEach(c => { %>
+      <% const sf = (c.saldoInicial || 0) + c.totDebito - c.totCredito; sumaSaldos += sf; %>
       <tr>
         <td><a href="#cuenta-<%= c.codigo %>"><code><%= c.codigo %></code></a></td>
         <td><%= c.nombre %></td>
-        <td class="c">
-          <span class="erp-badge-nat <%= c.naturaleza === 'D' ? 'deb' : 'cred' %>">
-            <%= c.naturaleza === 'D' ? 'Débito' : 'Crédito' %>
-          </span>
+        <td class="r" style="color:<%= (c.saldoInicial||0) >= 0 ? 'var(--erp-check-green)' : 'var(--red)' %>">
+          <%= (c.saldoInicial||0).toLocaleString('es-CO',{minimumFractionDigits:2}) %>
         </td>
         <td class="r erp-amount-debit"><%= c.totDebito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
         <td class="r erp-amount-credit"><%= c.totCredito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
-        <td class="r"><strong><%= Math.abs(c.saldo).toLocaleString('es-CO',{minimumFractionDigits:2}) %> <%= c.saldo >= 0 ? 'D' : 'C' %></strong></td>
+        <td class="r" style="font-weight:700;color:<%= sf >= 0 ? 'var(--erp-check-green)' : 'var(--red)' %>">
+          <%= sf.toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+        </td>
       </tr>
     <% }) %>
     </tbody>
+    <tfoot>
+      <tr style="background:var(--erp-header-bg);color:#fff;font-weight:700;">
+        <td colspan="5" style="text-align:right;">Suma de saldos (debe ser 0)</td>
+        <td class="r" style="color:<%= Math.abs(sumaSaldos) < 1 ? '#A8E6CF' : '#FFB3B3' %>">
+          <%= sumaSaldos.toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+          <%= Math.abs(sumaSaldos) < 1 ? '✓' : '✗' %>
+        </td>
+      </tr>
+    </tfoot>
   </table>
   </div>
 </div>
 
 <!-- DETALLE POR CUENTA -->
 <% mayor.forEach(c => { %>
+<% const sf = (c.saldoInicial || 0) + c.totDebito - c.totCredito; %>
 <div class="erp-book-section" id="cuenta-<%= c.codigo %>">
   <div class="erp-book-section-title">
     <code><%= c.codigo %></code> <%= c.nombre %>
-    <span class="erp-badge-nat <%= c.naturaleza === 'D' ? 'deb' : 'cred' %>">
-      Naturaleza <%= c.naturaleza === 'D' ? 'Débito' : 'Crédito' %>
-    </span>
     <span style="font-weight:400;font-size:12.5px;color:var(--muted);">
-      — Saldo: <strong style="color:var(--text);"><%= Math.abs(c.saldo).toLocaleString('es-CO',{minimumFractionDigits:2}) %> <%= c.saldo >= 0 ? 'D' : 'C' %></strong>
+      — Saldo inicial: <strong style="color:<%= (c.saldoInicial||0) >= 0 ? 'var(--erp-check-green)' : 'var(--red)' %>"><%= (c.saldoInicial||0).toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong>
+      &nbsp;|&nbsp; Saldo final: <strong style="color:<%= sf >= 0 ? 'var(--erp-check-green)' : 'var(--red)' %>"><%= sf.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong>
     </span>
   </div>
   <table class="erp-book-table">
@@ -90,25 +100,37 @@
       <th style="width:90px">Fecha</th>
       <th style="width:120px">Comprobante</th>
       <th>Concepto / Contraparte</th>
-      <th class="r" style="width:140px">Débito</th>
-      <th class="r" style="width:140px">Crédito</th>
+      <th class="r" style="width:140px">Débito (+)</th>
+      <th class="r" style="width:140px">Crédito (−)</th>
     </tr></thead>
     <tbody>
+    <tr style="background:var(--gray);font-style:italic;font-size:12px;">
+      <td colspan="3">Saldo inicial al <%= fechaDesde %></td>
+      <td class="r" colspan="2" style="font-weight:600;color:<%= (c.saldoInicial||0) >= 0 ? 'var(--erp-check-green)' : 'var(--red)' %>">
+        <%= (c.saldoInicial||0).toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+      </td>
+    </tr>
     <% c.movimientos.forEach(m => { %>
       <tr>
         <td><%= new Date(m.fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'2-digit'}) %></td>
         <td><code style="font-size:11px"><%= m.numero_comprobante %></code></td>
         <td><%= m.descripcion || m.concepto %><% if(m.contraparte){ %> <span style="color:var(--muted);">— <%= m.contraparte %></span><% } %></td>
-        <td class="r <%= m.debito > 0 ? 'erp-amount-debit' : '' %>"><%= m.debito > 0 ? Number(m.debito).toLocaleString('es-CO',{minimumFractionDigits:2}) : '0.00' %></td>
-        <td class="r <%= m.credito > 0 ? 'erp-amount-credit' : '' %>"><%= m.credito > 0 ? Number(m.credito).toLocaleString('es-CO',{minimumFractionDigits:2}) : '0.00' %></td>
+        <td class="r <%= m.debito > 0 ? 'erp-amount-debit' : '' %>"><%= m.debito > 0 ? Number(m.debito).toLocaleString('es-CO',{minimumFractionDigits:2}) : '' %></td>
+        <td class="r <%= m.credito > 0 ? 'erp-amount-credit' : '' %>"><%= m.credito > 0 ? Number(m.credito).toLocaleString('es-CO',{minimumFractionDigits:2}) : '' %></td>
       </tr>
     <% }) %>
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="3">Totales</td>
-        <td class="r"><%= c.totDebito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
-        <td class="r"><%= c.totCredito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td colspan="3">Totales del período</td>
+        <td class="r erp-amount-debit"><%= c.totDebito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r erp-amount-credit"><%= c.totCredito.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+      </tr>
+      <tr style="font-weight:700;">
+        <td colspan="4">Saldo final</td>
+        <td class="r" style="color:<%= sf >= 0 ? 'var(--erp-check-green)' : 'var(--red)' %>">
+          <%= sf.toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+        </td>
       </tr>
     </tfoot>
   </table>
