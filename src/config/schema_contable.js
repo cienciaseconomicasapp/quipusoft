@@ -526,6 +526,12 @@ async function crearSchemaContable(userId) {
       )
     `);
 
+    // Limpiar terceros obsoletos de versiones anteriores
+    await client.query(
+      `DELETE FROM ${s}.terceros WHERE codigo = ANY($1)`,
+      [['C-06B']] // C-06B era duplicado de C-06 Pedro Martínez
+    );
+
     for (const t of TERCEROS_SEED) {
       const [codigo, tipo_documento, identificacion, primer_apellido, segundo_apellido,
              primer_nombre, segundo_nombre, razon_social, direccion, cod_departamento,
@@ -536,7 +542,22 @@ async function crearSchemaContable(userId) {
            primer_nombre, segundo_nombre, razon_social, direccion, cod_departamento,
            cod_municipio, pais, es_cliente, es_proveedor, es_accionista, es_empleado)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
-         ON CONFLICT (codigo) DO NOTHING`,
+         ON CONFLICT (codigo) DO UPDATE SET
+           tipo_documento = EXCLUDED.tipo_documento,
+           identificacion = EXCLUDED.identificacion,
+           primer_apellido = EXCLUDED.primer_apellido,
+           segundo_apellido = EXCLUDED.segundo_apellido,
+           primer_nombre = EXCLUDED.primer_nombre,
+           segundo_nombre = EXCLUDED.segundo_nombre,
+           razon_social = EXCLUDED.razon_social,
+           direccion = EXCLUDED.direccion,
+           cod_departamento = EXCLUDED.cod_departamento,
+           cod_municipio = EXCLUDED.cod_municipio,
+           pais = EXCLUDED.pais,
+           es_cliente = EXCLUDED.es_cliente,
+           es_proveedor = EXCLUDED.es_proveedor,
+           es_accionista = EXCLUDED.es_accionista,
+           es_empleado = EXCLUDED.es_empleado`,
         [codigo, tipo_documento, identificacion, primer_apellido, segundo_apellido,
          primer_nombre, segundo_nombre, razon_social, direccion, cod_departamento,
          cod_municipio, pais, es_cliente, es_proveedor, es_accionista, es_empleado]
