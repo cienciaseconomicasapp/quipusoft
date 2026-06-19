@@ -36,7 +36,9 @@ router.get('/iva/:bimestre', requireAuth, setSchema, async (req, res) => {
   const mesInicio = (bim - 1) * 2 + 1;
   const mesFin = bim * 2;
   const fechaInicio = `${ANNO}-${String(mesInicio).padStart(2, '0')}-01`;
-  const fechaFin = `${ANNO}-${String(mesFin).padStart(2, '0')}-31`;
+  // Último día real del mes: día 1 del mes siguiente menos 1 día
+  const ultimoDia = new Date(ANNO, mesFin, 0).getDate(); // día 0 del mes+1 = último día del mes
+  const fechaFin = `${ANNO}-${String(mesFin).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
 
   try {
     const { rows: [r] } = await pool.query(`
@@ -90,7 +92,8 @@ router.get('/retencion/:mes', requireAuth, setSchema, async (req, res) => {
   const schema = req.schema;
   const mes = parseInt(req.params.mes);
   const fechaInicio = `${ANNO}-${String(mes).padStart(2, '0')}-01`;
-  const fechaFin = `${ANNO}-${String(mes).padStart(2, '0')}-31`;
+  const ultimoDiaMes = new Date(ANNO, mes, 0).getDate();
+  const fechaFin = `${ANNO}-${String(mes).padStart(2, '0')}-${String(ultimoDiaMes).padStart(2, '0')}`;
   const TARIFA_COMPRAS = 2.5;
 
   try {
