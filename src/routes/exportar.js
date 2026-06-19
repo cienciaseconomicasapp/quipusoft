@@ -2,6 +2,13 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const { requireAuth, setSchema } = require('../middleware/auth');
+
+// Carga lazy de exceljs — evita crash si aún no está instalado en producción
+let ExcelJS;
+try { ExcelJS = require('exceljs'); } catch(e) {
+  console.warn('[exportar] exceljs no instalado — ejecute npm install');
+}
+
 const { sendExcel, headerRow, subtotalRow, dataRow, titleBlock, fmt } = require('../utils/excel');
 
 const ANNO = 2026;

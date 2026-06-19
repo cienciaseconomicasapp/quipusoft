@@ -1,4 +1,7 @@
-const ExcelJS = require('exceljs');
+let ExcelJS;
+try { ExcelJS = require('exceljs'); } catch(e) {
+  console.warn('[excel.js] exceljs no disponible');
+}
 
 // ── Estilos compartidos ───────────────────────────────────────────────────────
 const AZUL  = '2E75B6';
@@ -66,6 +69,10 @@ function fmt(n) { return typeof n === 'number' ? n : (Number(n) || 0); }
 
 // ── Función principal de respuesta HTTP ──────────────────────────────────────
 async function sendExcel(res, filename, buildFn) {
+  if (!ExcelJS) {
+    res.status(503).send('ExcelJS no disponible — ejecute npm install en el servidor.');
+    return;
+  }
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Quipusoft'; wb.created = new Date();
   await buildFn(wb);
