@@ -72,7 +72,7 @@ const FUENTES_ASIENTO = {
 router.get('/nueva/form', requireAuth, setSchema, async (req, res) => {
   const schema = req.schema;
   const nombreExpr = `CASE WHEN razon_social <> '' THEN razon_social
-    ELSE TRIM(CONCAT(primer_nombre, ' ', segundo_nombre, ' ', primer_apellido, ' ', segundo_apellido)) END`;
+    ELSE TRIM(CONCAT(COALESCE(primer_nombre,''),' ',COALESCE(segundo_nombre,''),' ',COALESCE(primer_apellido,''),' ',COALESCE(segundo_apellido,''))) END`;
 
   const [clientesQ, proveedoresQ, cuentas, productos] = await Promise.all([
     pool.query(`SELECT *, ${nombreExpr} AS nombre FROM "${schema}".terceros WHERE activo = TRUE AND es_cliente = TRUE ORDER BY nombre`),

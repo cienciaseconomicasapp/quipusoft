@@ -58,7 +58,7 @@ router.get('/terceros', requireAuth, setSchema, async (req, res) => {
   const { rows } = await pool.query(
     `SELECT codigo, tipo_documento, identificacion,
       CASE WHEN razon_social <> '' THEN razon_social
-        ELSE TRIM(CONCAT(primer_nombre,' ',segundo_nombre,' ',primer_apellido,' ',segundo_apellido)) END AS nombre,
+        ELSE TRIM(CONCAT(COALESCE(primer_nombre,''),' ',COALESCE(segundo_nombre,''),' ',COALESCE(primer_apellido,''),' ',COALESCE(segundo_apellido,''))) END AS nombre,
       direccion, cod_departamento, cod_municipio, pais,
       es_cliente, es_proveedor, es_accionista, es_empleado, activo
      FROM "${schema}".terceros ORDER BY codigo`

@@ -40,7 +40,7 @@ router.get('/1001', requireAuth, setSchema, async (req, res) => {
     // Para cada tercero, calcular pagos y retenciones desde asientos
     // Usamos la contraparte del asiento para vincular con el tercero
     const nombreExpr = `CASE WHEN razon_social <> '' THEN razon_social
-      ELSE TRIM(CONCAT(primer_nombre, ' ', segundo_nombre, ' ', primer_apellido, ' ', segundo_apellido)) END`;
+      ELSE TRIM(CONCAT(COALESCE(primer_nombre,''),' ',COALESCE(segundo_nombre,''),' ',COALESCE(primer_apellido,''),' ',COALESCE(segundo_apellido,''))) END`;
 
     const { rows: pagos } = await pool.query(`
       SELECT
@@ -113,7 +113,7 @@ router.get('/1001', requireAuth, setSchema, async (req, res) => {
 router.get('/1007', requireAuth, setSchema, async (req, res) => {
   const s = schema(req.user.id);
   const nombreExpr = `CASE WHEN razon_social <> '' THEN razon_social
-    ELSE TRIM(CONCAT(primer_nombre, ' ', segundo_nombre, ' ', primer_apellido, ' ', segundo_apellido)) END`;
+    ELSE TRIM(CONCAT(COALESCE(primer_nombre,''),' ',COALESCE(segundo_nombre,''),' ',COALESCE(primer_apellido,''),' ',COALESCE(segundo_apellido,''))) END`;
 
   try {
     const { rows: ingresos } = await pool.query(`
@@ -215,7 +215,7 @@ router.get('/iva', requireAuth, setSchema, async (req, res) => {
 router.get('/saldos', requireAuth, setSchema, async (req, res) => {
   const s = schema(req.user.id);
   const nombreExpr = `CASE WHEN razon_social <> '' THEN razon_social
-    ELSE TRIM(CONCAT(primer_nombre, ' ', segundo_nombre, ' ', primer_apellido, ' ', segundo_apellido)) END`;
+    ELSE TRIM(CONCAT(COALESCE(primer_nombre,''),' ',COALESCE(segundo_nombre,''),' ',COALESCE(primer_apellido,''),' ',COALESCE(segundo_apellido,''))) END`;
 
   try {
     // 1008 — Saldos cartera (cuentas por cobrar al 31-dic)

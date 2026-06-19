@@ -422,6 +422,9 @@ const TERCEROS_SEED = [
   ["E-03","CC","1143456789","Herrera","Camargo","Luis","Felipe","Luis Herrera Camargo","Cra 38 #68-40, Barranquilla","08","08001","169",false,false,false,true],
   ["DIAN","NIT","800197268","","","","","DIAN","Calle 75C #15-80, Bogota","11","11001","169",false,false,false,false],
   ["PILA","NIT","900200278","","","","","UGPP — Gestión Pensional y Parafiscales","Cra 7 #32-16, Bogota","11","11001","169",false,false,false,false],
+  ["ACC","NIT","900123456","","","","","Accionistas","Calle 45 #30-10, Barranquilla","08","08001","169",false,false,true,false],
+  ["EMP","CC","","","","","","Empleados","Calle 45 #30-10, Barranquilla","08","08001","169",false,false,false,true],
+  ["AF","NIT","900123456","","","","","Activos fijos","Calle 45 #30-10, Barranquilla","08","08001","169",false,false,false,false],
 ];
 // Catálogo de productos y servicios — vincula cada ítem con sus cuentas contables
 // [codigo, nombre, tipo ('producto'|'servicio'), cuenta_ingreso, cuenta_costo, cuenta_inventario,

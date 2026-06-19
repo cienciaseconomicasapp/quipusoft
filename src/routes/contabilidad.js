@@ -824,8 +824,13 @@ router.get('/balance-terceros', requireAuth, async (req, res) => {
 
   try {
     // Expresión para obtener nombre visible del tercero en la tabla terceros
-    const nombreExpr = `CASE WHEN t.razon_social <> '' THEN t.razon_social
-      ELSE TRIM(CONCAT(t.primer_nombre,' ',t.segundo_nombre,' ',t.primer_apellido,' ',t.segundo_apellido)) END`;
+    const nombreExpr = `CASE WHEN COALESCE(t.razon_social,'') <> '' THEN t.razon_social
+      ELSE TRIM(CONCAT(
+        COALESCE(t.primer_nombre,''),' ',
+        COALESCE(t.segundo_nombre,''),' ',
+        COALESCE(t.primer_apellido,''),' ',
+        COALESCE(t.segundo_apellido,'')
+      )) END`;
 
     // Saldo anterior por cuenta × tercero (movimientos ANTES del período)
     const { rows: saldosAnt } = await pool.query(`
