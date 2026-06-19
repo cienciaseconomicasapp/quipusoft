@@ -1,0 +1,124 @@
+<%- include('../partials/header') %>
+<%- include('../partials/erp-header', {
+  icon: '👥', title: 'Balance de Prueba por Tercero',
+  tabs: [
+    { label: 'Libro mayor',       href: '/contabilidad/libro-mayor',       active: false },
+    { label: 'Libro diario',      href: '/contabilidad/libro-diario',      active: false },
+    { label: 'Balance por tercero', href: '/contabilidad/balance-terceros', active: true },
+  ]
+}) %>
+
+<div class="erp-search-panel">
+  <form method="GET" action="/contabilidad/balance-terceros" class="erp-search-form">
+    <div class="erp-search-row">
+      <label>Período</label>
+      <div class="erp-field-wrap valid">
+        <input class="erp-input" type="date" name="desde" value="<%= fechaDesde %>">
+        <span style="padding:0 4px;color:var(--muted);">—</span>
+        <input class="erp-input" type="date" name="hasta" value="<%= fechaHasta %>">
+        <span class="erp-check">✓</span>
+      </div>
+      <button type="submit" class="erp-btn erp-btn-blue">🔎 Consultar</button>
+      <button type="button" onclick="window.print()" class="erp-btn erp-btn-outline">🖨 Imprimir</button>
+    </div>
+  </form>
+</div>
+
+<% if(error && error.length){ %><div class="alert alert-error"><%= error %></div><% } %>
+
+<div class="erp-totales-bar">
+  <span>Cuentas: <strong><%= cuentas.length %></strong></span>
+  <span>Saldo anterior: <strong style="color:<%= gran.saldo_ant>=0?'var(--erp-check-green)':'var(--red)' %>">
+    $<%= gran.saldo_ant.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
+  <span>Mov. débito: <strong class="erp-amount-debit">$<%= gran.deb_per.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
+  <span>Mov. crédito: <strong class="erp-amount-credit">$<%= gran.cre_per.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong></span>
+  <span>Saldo final: <strong style="color:<%= Math.abs(gran.saldo_fin)<1?'var(--erp-check-green)':'var(--red)' %>">
+    $<%= gran.saldo_fin.toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+    <%= Math.abs(gran.saldo_fin)<1?' ✓':'' %>
+  </strong></span>
+</div>
+
+<% if(cuentas.length===0){ %>
+  <div style="padding:2rem;text-align:center;color:var(--muted);">No hay movimientos con tercero en el período seleccionado.</div>
+<% } %>
+
+<% cuentas.forEach(cuenta => { %>
+<div class="erp-book-section">
+  <div class="erp-book-section-title" style="display:flex;justify-content:space-between;">
+    <span><code><%= cuenta.codigo %></code> &nbsp;<%= cuenta.nombre %></span>
+    <span style="font-size:12px;font-weight:400;color:var(--muted);">
+      S. anterior: <strong><%= cuenta.saldo_ant_tot.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong> &nbsp;|&nbsp;
+      S. final: <strong style="color:<%= cuenta.saldo_fin_tot>=0?'var(--erp-check-green)':'var(--red)' %>"><%= cuenta.saldo_fin_tot.toLocaleString('es-CO',{minimumFractionDigits:2}) %></strong>
+    </span>
+  </div>
+  <table class="erp-book-table" style="font-size:12px;">
+    <thead><tr>
+      <th>Tercero</th>
+      <th class="r" style="width:160px">Saldo anterior</th>
+      <th class="r" style="width:160px">Mov. débito (+)</th>
+      <th class="r" style="width:160px">Mov. crédito (−)</th>
+      <th class="r" style="width:160px">Saldo final</th>
+    </tr></thead>
+    <tbody>
+    <% cuenta.terceros.forEach(t => { %>
+      <tr>
+        <td><%= t.tercero %></td>
+        <td class="r" style="color:<%= t.saldo_ant>=0?'var(--erp-check-green)':'var(--red)' %>">
+          <%= t.saldo_ant.toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+        </td>
+        <td class="r erp-amount-debit">
+          <%= t.deb_per>0 ? t.deb_per.toLocaleString('es-CO',{minimumFractionDigits:2}) : '—' %>
+        </td>
+        <td class="r erp-amount-credit">
+          <%= t.cre_per>0 ? t.cre_per.toLocaleString('es-CO',{minimumFractionDigits:2}) : '—' %>
+        </td>
+        <td class="r" style="font-weight:700;color:<%= t.saldo_fin>=0?'var(--erp-check-green)':'var(--red)' %>">
+          <%= t.saldo_fin.toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+        </td>
+      </tr>
+    <% }) %>
+    </tbody>
+    <tfoot>
+      <tr style="background:var(--erp-header-bg);color:#fff;font-weight:700;">
+        <td>Subtotal cuenta <%= cuenta.codigo %></td>
+        <td class="r"><%= cuenta.saldo_ant_tot.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r"><%= cuenta.tot_deb_per.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r"><%= cuenta.tot_cre_per.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r" style="color:<%= cuenta.saldo_fin_tot>=0?'#A8E6CF':'#FFB3B3' %>">
+          <%= cuenta.saldo_fin_tot.toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+<% }) %>
+
+<% if(cuentas.length>0){ %>
+<div class="erp-book-section" style="background:var(--erp-header-bg);color:#fff;border-radius:8px;margin-top:1.5rem;">
+  <div class="erp-book-section-title" style="color:#fff;font-size:16px;">Gran Total — <%= fechaDesde %> al <%= fechaHasta %></div>
+  <table class="erp-book-table" style="color:#fff;">
+    <thead><tr>
+      <th>Concepto</th>
+      <th class="r">Saldo anterior</th>
+      <th class="r">Mov. débito (+)</th>
+      <th class="r">Mov. crédito (−)</th>
+      <th class="r">Saldo final</th>
+    </tr></thead>
+    <tbody>
+      <tr style="font-size:15px;font-weight:700;">
+        <td>TOTAL GENERAL (<%= cuentas.length %> cuentas)</td>
+        <td class="r">$<%= gran.saldo_ant.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r">$<%= gran.deb_per.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r">$<%= gran.cre_per.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
+        <td class="r" style="color:<%= Math.abs(gran.saldo_fin)<1?'#A8E6CF':'#FFB3B3' %>">
+          $<%= gran.saldo_fin.toLocaleString('es-CO',{minimumFractionDigits:2}) %>
+          <%= Math.abs(gran.saldo_fin)<1?' ✓':' ✗' %>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<% } %>
+
+<style>@media print { nav,.erp-tabs,.erp-search-panel,.erp-actions{display:none;} }</style>
+<%- include('../partials/footer') %>

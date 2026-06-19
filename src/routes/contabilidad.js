@@ -813,4 +813,125 @@ router.post('/productos/:codigo/toggle', requireAuth, async (req, res) => {
   res.redirect('/contabilidad/productos');
 });
 
+// ── GET /contabilidad/balance-terceros ────────────────────────────────────────
+// Balance de prueba por tercero: por cada cuenta → por cada tercero →
+// saldo anterior + movimiento débito + movimiento crédito + saldo final
+router.get('/balance-terceros', requireAuth, async (req, res) => {
+  const s = schema(req.user.id);
+  const { desde, hasta } = req.query;
+  const fechaDesde = desde || '2026-01-01';
+  const fechaHasta = hasta || '2026-12-31';
+
+  try {
+    // Saldo anterior por cuenta × tercero (movimientos ANTES del período)
+    const { rows: saldosAnt } = await pool.query(`
+      SELECT
+        ad.cuenta_codigo,
+        pc.nombre AS cuenta_nombre,
+        a.contraparte AS tercero,
+        COALESCE(SUM(ad.debito), 0)  AS deb_ant,
+        COALESCE(SUM(ad.credito), 0) AS cre_ant
+      FROM "${s}".asientos_detalle ad
+      JOIN "${s}".asientos a ON a.id = ad.asiento_id
+      JOIN "${s}".plan_cuentas pc ON pc.codigo = ad.cuenta_codigo
+      WHERE a.fecha < $1
+        AND a.contraparte IS NOT NULL AND a.contraparte <> ''
+      GROUP BY ad.cuenta_codigo, pc.nombre, a.contraparte
+      ORDER BY ad.cuenta_codigo, a.contraparte
+    `, [fechaDesde]);
+
+    // Movimientos del período por cuenta × tercero
+    const { rows: movs } = await pool.query(`
+      SELECT
+        ad.cuenta_codigo,
+        pc.nombre AS cuenta_nombre,
+        a.contraparte AS tercero,
+        COALESCE(SUM(ad.debito), 0)  AS deb_per,
+        COALESCE(SUM(ad.credito), 0) AS cre_per
+      FROM "${s}".asientos_detalle ad
+      JOIN "${s}".asientos a ON a.id = ad.asiento_id
+      JOIN "${s}".plan_cuentas pc ON pc.codigo = ad.cuenta_codigo
+      WHERE a.fecha BETWEEN $1 AND $2
+        AND a.contraparte IS NOT NULL AND a.contraparte <> ''
+      GROUP BY ad.cuenta_codigo, pc.nombre, a.contraparte
+      ORDER BY ad.cuenta_codigo, a.contraparte
+    `, [fechaDesde, fechaHasta]);
+
+    // Combinar: unir por cuenta+tercero
+    const mapa = {}; // clave = cuenta_codigo|tercero
+
+    const key = (cuenta, tercero) => `${cuenta}||${tercero}`;
+
+    for (const r of saldosAnt) {
+      const k = key(r.cuenta_codigo, r.tercero);
+      if (!mapa[k]) mapa[k] = {
+        cuenta_codigo: r.cuenta_codigo, cuenta_nombre: r.cuenta_nombre,
+        tercero: r.tercero, deb_ant: 0, cre_ant: 0, deb_per: 0, cre_per: 0
+      };
+      mapa[k].deb_ant += Number(r.deb_ant);
+      mapa[k].cre_ant += Number(r.cre_ant);
+    }
+    for (const r of movs) {
+      const k = key(r.cuenta_codigo, r.tercero);
+      if (!mapa[k]) mapa[k] = {
+        cuenta_codigo: r.cuenta_codigo, cuenta_nombre: r.cuenta_nombre,
+        tercero: r.tercero, deb_ant: 0, cre_ant: 0, deb_per: 0, cre_per: 0
+      };
+      mapa[k].deb_per += Number(r.deb_per);
+      mapa[k].cre_per += Number(r.cre_per);
+    }
+
+    // Agrupar por cuenta
+    const cuentas = {};
+    for (const [k, v] of Object.entries(mapa)) {
+      const { cuenta_codigo: cc, cuenta_nombre: cn } = v;
+      if (!cuentas[cc]) cuentas[cc] = {
+        codigo: cc, nombre: cn, terceros: [],
+        tot_deb_ant: 0, tot_cre_ant: 0, tot_deb_per: 0, tot_cre_per: 0
+      };
+      const saldo_ant = v.deb_ant - v.cre_ant;
+      const saldo_fin = saldo_ant + v.deb_per - v.cre_per;
+      cuentas[cc].terceros.push({ ...v, saldo_ant, saldo_fin });
+      cuentas[cc].tot_deb_ant += v.deb_ant;
+      cuentas[cc].tot_cre_ant += v.cre_ant;
+      cuentas[cc].tot_deb_per += v.deb_per;
+      cuentas[cc].tot_cre_per += v.cre_per;
+    }
+
+    // Calcular subtotales por cuenta
+    const cuentasArr = Object.values(cuentas)
+      .sort((a, b) => a.codigo.localeCompare(b.codigo))
+      .map(c => ({
+        ...c,
+        saldo_ant_tot: c.tot_deb_ant - c.tot_cre_ant,
+        saldo_fin_tot: (c.tot_deb_ant - c.tot_cre_ant) + c.tot_deb_per - c.tot_cre_per,
+        terceros: c.terceros.sort((a, b) => a.tercero.localeCompare(b.tercero)),
+      }));
+
+    // Gran total
+    const gran = cuentasArr.reduce((acc, c) => ({
+      deb_ant: acc.deb_ant + c.tot_deb_ant,
+      cre_ant: acc.cre_ant + c.tot_cre_ant,
+      deb_per: acc.deb_per + c.tot_deb_per,
+      cre_per: acc.cre_per + c.tot_cre_per,
+      saldo_ant: acc.saldo_ant + c.saldo_ant_tot,
+      saldo_fin: acc.saldo_fin + c.saldo_fin_tot,
+    }), { deb_ant:0, cre_ant:0, deb_per:0, cre_per:0, saldo_ant:0, saldo_fin:0 });
+
+    res.render('contabilidad/balance-terceros', {
+      title: 'Balance de Prueba por Tercero — Quipusoft',
+      user: req.user,
+      cuentas: cuentasArr,
+      gran,
+      fechaDesde,
+      fechaHasta,
+      error: req.flash('error'),
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Error: ' + e.message);
+    res.redirect('/contabilidad');
+  }
+});
+
 module.exports = router;
