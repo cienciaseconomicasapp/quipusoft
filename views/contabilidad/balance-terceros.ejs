@@ -54,15 +54,19 @@
   </div>
   <table class="erp-book-table" style="font-size:12px;">
     <thead><tr>
+      <th style="width:70px">Tipo doc.</th>
+      <th style="width:120px">Identificación</th>
       <th>Tercero</th>
-      <th class="r" style="width:160px">Saldo anterior</th>
-      <th class="r" style="width:160px">Mov. débito (+)</th>
-      <th class="r" style="width:160px">Mov. crédito (−)</th>
-      <th class="r" style="width:160px">Saldo final</th>
+      <th class="r" style="width:140px">Saldo anterior</th>
+      <th class="r" style="width:140px">Mov. débito (+)</th>
+      <th class="r" style="width:140px">Mov. crédito (−)</th>
+      <th class="r" style="width:140px">Saldo final</th>
     </tr></thead>
     <tbody>
     <% cuenta.terceros.forEach(t => { %>
       <tr>
+        <td style="color:var(--muted);font-size:11px;"><%= t.tipo_documento || '—' %></td>
+        <td><code style="font-size:11px;"><%= t.identificacion || '—' %></code></td>
         <td><%= t.tercero %></td>
         <td class="r" style="color:<%= t.saldo_ant>=0?'var(--erp-check-green)':'var(--red)' %>">
           <%= t.saldo_ant.toLocaleString('es-CO',{minimumFractionDigits:2}) %>
@@ -81,7 +85,7 @@
     </tbody>
     <tfoot>
       <tr style="background:var(--erp-header-bg);color:#fff;font-weight:700;">
-        <td>Subtotal cuenta <%= cuenta.codigo %></td>
+        <td colspan="3">Subtotal cuenta <%= cuenta.codigo %></td>
         <td class="r"><%= cuenta.saldo_ant_tot.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
         <td class="r"><%= cuenta.tot_deb_per.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
         <td class="r"><%= cuenta.tot_cre_per.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
@@ -99,7 +103,7 @@
   <div class="erp-book-section-title" style="color:#fff;font-size:16px;">Gran Total — <%= fechaDesde %> al <%= fechaHasta %></div>
   <table class="erp-book-table" style="color:#fff;">
     <thead><tr>
-      <th>Concepto</th>
+      <th colspan="3">Concepto</th>
       <th class="r">Saldo anterior</th>
       <th class="r">Mov. débito (+)</th>
       <th class="r">Mov. crédito (−)</th>
@@ -107,7 +111,7 @@
     </tr></thead>
     <tbody>
       <tr style="font-size:15px;font-weight:700;">
-        <td>TOTAL GENERAL (<%= cuentas.length %> cuentas)</td>
+        <td colspan="3">TOTAL GENERAL (<%= cuentas.length %> cuentas)</td>
         <td class="r">$<%= gran.saldo_ant.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
         <td class="r">$<%= gran.deb_per.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>
         <td class="r">$<%= gran.cre_per.toLocaleString('es-CO',{minimumFractionDigits:2}) %></td>

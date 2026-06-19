@@ -823,20 +823,28 @@ router.get('/balance-terceros', requireAuth, async (req, res) => {
   const fechaHasta = hasta || '2026-12-31';
 
   try {
+    // Expresión para obtener nombre visible del tercero en la tabla terceros
+    const nombreExpr = `CASE WHEN t.razon_social <> '' THEN t.razon_social
+      ELSE TRIM(CONCAT(t.primer_nombre,' ',t.segundo_nombre,' ',t.primer_apellido,' ',t.segundo_apellido)) END`;
+
     // Saldo anterior por cuenta × tercero (movimientos ANTES del período)
     const { rows: saldosAnt } = await pool.query(`
       SELECT
         ad.cuenta_codigo,
         pc.nombre AS cuenta_nombre,
         a.contraparte AS tercero,
+        t.tipo_documento,
+        t.identificacion,
         COALESCE(SUM(ad.debito), 0)  AS deb_ant,
         COALESCE(SUM(ad.credito), 0) AS cre_ant
       FROM "${s}".asientos_detalle ad
       JOIN "${s}".asientos a ON a.id = ad.asiento_id
       JOIN "${s}".plan_cuentas pc ON pc.codigo = ad.cuenta_codigo
+      LEFT JOIN "${s}".terceros t ON ${nombreExpr} = a.contraparte
       WHERE a.fecha < $1
         AND a.contraparte IS NOT NULL AND a.contraparte <> ''
-      GROUP BY ad.cuenta_codigo, pc.nombre, a.contraparte
+      GROUP BY ad.cuenta_codigo, pc.nombre, a.contraparte,
+        t.tipo_documento, t.identificacion
       ORDER BY ad.cuenta_codigo, a.contraparte
     `, [fechaDesde]);
 
@@ -846,19 +854,23 @@ router.get('/balance-terceros', requireAuth, async (req, res) => {
         ad.cuenta_codigo,
         pc.nombre AS cuenta_nombre,
         a.contraparte AS tercero,
+        t.tipo_documento,
+        t.identificacion,
         COALESCE(SUM(ad.debito), 0)  AS deb_per,
         COALESCE(SUM(ad.credito), 0) AS cre_per
       FROM "${s}".asientos_detalle ad
       JOIN "${s}".asientos a ON a.id = ad.asiento_id
       JOIN "${s}".plan_cuentas pc ON pc.codigo = ad.cuenta_codigo
+      LEFT JOIN "${s}".terceros t ON ${nombreExpr} = a.contraparte
       WHERE a.fecha BETWEEN $1 AND $2
         AND a.contraparte IS NOT NULL AND a.contraparte <> ''
-      GROUP BY ad.cuenta_codigo, pc.nombre, a.contraparte
+      GROUP BY ad.cuenta_codigo, pc.nombre, a.contraparte,
+        t.tipo_documento, t.identificacion
       ORDER BY ad.cuenta_codigo, a.contraparte
     `, [fechaDesde, fechaHasta]);
 
     // Combinar: unir por cuenta+tercero
-    const mapa = {}; // clave = cuenta_codigo|tercero
+    const mapa = {};
 
     const key = (cuenta, tercero) => `${cuenta}||${tercero}`;
 
@@ -866,19 +878,34 @@ router.get('/balance-terceros', requireAuth, async (req, res) => {
       const k = key(r.cuenta_codigo, r.tercero);
       if (!mapa[k]) mapa[k] = {
         cuenta_codigo: r.cuenta_codigo, cuenta_nombre: r.cuenta_nombre,
-        tercero: r.tercero, deb_ant: 0, cre_ant: 0, deb_per: 0, cre_per: 0
+        tercero: r.tercero,
+        tipo_documento: r.tipo_documento || '—',
+        identificacion: r.identificacion || '—',
+        deb_ant: 0, cre_ant: 0, deb_per: 0, cre_per: 0
       };
       mapa[k].deb_ant += Number(r.deb_ant);
       mapa[k].cre_ant += Number(r.cre_ant);
+      // Completar identificación si viene en saldo anterior
+      if (r.identificacion) {
+        mapa[k].tipo_documento = r.tipo_documento;
+        mapa[k].identificacion = r.identificacion;
+      }
     }
     for (const r of movs) {
       const k = key(r.cuenta_codigo, r.tercero);
       if (!mapa[k]) mapa[k] = {
         cuenta_codigo: r.cuenta_codigo, cuenta_nombre: r.cuenta_nombre,
-        tercero: r.tercero, deb_ant: 0, cre_ant: 0, deb_per: 0, cre_per: 0
+        tercero: r.tercero,
+        tipo_documento: r.tipo_documento || '—',
+        identificacion: r.identificacion || '—',
+        deb_ant: 0, cre_ant: 0, deb_per: 0, cre_per: 0
       };
       mapa[k].deb_per += Number(r.deb_per);
       mapa[k].cre_per += Number(r.cre_per);
+      if (r.identificacion) {
+        mapa[k].tipo_documento = r.tipo_documento;
+        mapa[k].identificacion = r.identificacion;
+      }
     }
 
     // Agrupar por cuenta
