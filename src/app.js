@@ -65,6 +65,8 @@ app.use('/dashboard', require('./routes/dashboard'));
 app.use('/transacciones', require('./routes/transacciones'));
 app.use('/nomina', require('./routes/nomina'));
 app.use('/declaraciones', require('./routes/declaraciones'));
+app.use('/exogena', require('./routes/exogena'));
+app.use('/exportar', require('./routes/exportar'));
 app.use('/contabilidad', require('./routes/contabilidad'));
 app.use('/admin', require('./routes/admin'));
 app.use('/evaluaciones', require('./routes/evaluaciones'));
